@@ -14,6 +14,7 @@ const ComprasPage = () => {
   const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
   const [cuentas, setCuentas] = useState([]);
+  const [saldos, setSaldos] = useState({});
   const [cuentaOrigen, setCuentaOrigen] = useState('');
   
   const metodosPago = [
@@ -37,16 +38,18 @@ const ComprasPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [prodRes, provRes, catRes, cuenRes] = await Promise.all([
+      const [prodRes, provRes, catRes, cuenRes, finRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_URL}/api/productos`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/proveedores`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/categorias`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/cuentas`)
+        axios.get(`${import.meta.env.VITE_API_URL}/api/cuentas`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/finanzas/resumen`)
       ]);
       setProductos(prodRes.data);
       setProveedores(provRes.data);
       setCategoriasExistentes(catRes.data);
       setCuentas(cuenRes.data);
+      setSaldos(finRes.data.saldos || {});
       if (cuenRes.data.length > 0) setCuentaOrigen(cuenRes.data[0].nombre);
     } catch (error) {
       console.error("Error cargando datos:", error);
@@ -331,6 +334,14 @@ const ComprasPage = () => {
                   <option key={c._id} value={c.nombre}>{c.nombre}</option>
                 ))}
               </select>
+              {cuentaOrigen && (
+                <p className="mt-2 text-right">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mr-1">Saldo Disponible:</span>
+                  <span className={`text-sm font-black ${(saldos[cuentaOrigen] || 0) >= totalCarrito ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    Bs. {(saldos[cuentaOrigen] || 0).toFixed(2)}
+                  </span>
+                </p>
+              )}
             </div>
 
             <div className="flex justify-between items-center mb-6">

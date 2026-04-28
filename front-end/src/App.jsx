@@ -15,6 +15,7 @@ const ComprasPage    = lazy(() => import('./pages/ComprasPage.jsx'));
 const FinanzasPage   = lazy(() => import('./pages/FinanzasPage.jsx'));
 const LogisticaPage  = lazy(() => import('./pages/LogisticaPage.jsx'));
 const LoginPage      = lazy(() => import('./pages/LoginPage.jsx'));
+const ProveedoresPage = lazy(() => import('./pages/ProveedoresPage.jsx'));
 
 // Spinner de carga
 const PageLoader = () => (
@@ -27,7 +28,6 @@ const PageLoader = () => (
 );
 
 // Páginas Mocks
-const ProveedoresPage = () => <div className="p-8"><h1 className="text-3xl font-bold text-kitty-pink mb-4">Proveedores ✨</h1></div>;
 
 // Ruta protegida
 const PrivateRoute = ({ children }) => {
