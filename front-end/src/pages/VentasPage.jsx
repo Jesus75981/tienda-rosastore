@@ -14,6 +14,7 @@ const VentasPage = () => {
   const [metodoPago, setMetodoPago] = useState('Efectivo');
   const [cuentaDestino, setCuentaDestino] = useState('');
   const [cuentasDb, setCuentasDb] = useState([]);
+  const [saldos, setSaldos] = useState({});
   const [isClienteModalOpen, setIsClienteModalOpen] = useState(false);
   const [nuevoCliente, setNuevoCliente] = useState({ nombre: '', telefono: '' });
   
@@ -31,15 +32,17 @@ const VentasPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [prodRes, cliRes, cuentaRes] = await Promise.all([
+        const [prodRes, cliRes, cuentaRes, finRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/api/productos`),
           axios.get(`${import.meta.env.VITE_API_URL}/api/clientes`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/cuentas`)
+          axios.get(`${import.meta.env.VITE_API_URL}/api/cuentas`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/finanzas/resumen`)
         ]);
         // Solo mostrar productos con stock
         setProductos(prodRes.data.filter(p => p.stock > 0));
         setClientes(cliRes.data);
         setCuentasDb(cuentaRes.data);
+        setSaldos(finRes.data.saldos || {});
         if (cuentaRes.data.length > 0) {
           setCuentaDestino(cuentaRes.data[0].nombre);
         } else {
@@ -282,11 +285,15 @@ const VentasPage = () => {
                 onChange={(e) => setCuentaDestino(e.target.value)}
                 className="w-full bg-white border border-pink-100 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm font-medium text-slate-700"
               >
-                {cuentasDb.length === 0 && <option value="Caja Tienda">Caja Tienda</option>}
                 {cuentasDb.map(c => (
-                  <option key={c._id} value={c.nombre}>{c.nombre} ({c.moneda})</option>
+                  <option key={c._id} value={c.nombre}>{c.nombre} - Bs. {(saldos[c.nombre] || 0).toFixed(2)}</option>
                 ))}
               </select>
+              {cuentaDestino && (
+                <p className="mt-1 text-[10px] text-right font-bold text-emerald-500 uppercase tracking-widest">
+                  Se sumará al saldo actual
+                </p>
+              )}
             </div>
 
             {/* Logística */}

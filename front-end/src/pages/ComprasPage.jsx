@@ -331,7 +331,7 @@ const ComprasPage = () => {
               >
                 <option value="">Seleccionar cuenta...</option>
                 {cuentas.map(c => (
-                  <option key={c._id} value={c.nombre}>{c.nombre}</option>
+                  <option key={c._id} value={c.nombre}>{c.nombre} - Bs. {(saldos[c.nombre] || 0).toFixed(2)}</option>
                 ))}
               </select>
               {cuentaOrigen && (
