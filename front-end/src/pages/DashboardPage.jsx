@@ -14,7 +14,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get('import.meta.env.VITE_API_URL/api/dashboard/stats');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/stats`);
         setStats(response.data);
       } catch (error) {
         console.error("Error cargando dashboard:", error);
@@ -128,4 +128,7 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
+
+
 

@@ -10,7 +10,7 @@ const LogisticaPage = () => {
   const fetchEntregas = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('import.meta.env.VITE_API_URL/api/logistica/detalles');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistica/detalles`);
       setEntregas(res.data);
     } catch (error) {
       console.error("Error al cargar logística:", error);
@@ -161,4 +161,7 @@ const LogisticaPage = () => {
 };
 
 export default LogisticaPage;
+
+
+
 

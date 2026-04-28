@@ -14,7 +14,7 @@ const InventarioPage = () => {
   const fetchProductos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('import.meta.env.VITE_API_URL/api/productos');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`);
       setProductos(res.data);
     } catch (error) {
       console.error("Error al cargar inventario:", error);
@@ -247,4 +247,7 @@ const InventarioPage = () => {
 };
 
 export default InventarioPage;
+
+
+
 

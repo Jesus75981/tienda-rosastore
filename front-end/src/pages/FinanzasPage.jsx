@@ -88,7 +88,7 @@ const FinanzasPage = () => {
   const handleCrearTransaccion = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('import.meta.env.VITE_API_URL/api/finanzas', {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/finanzas`, {
         ...nuevaTransaccion,
         monto: parseFloat(nuevaTransaccion.monto)
       });
@@ -107,14 +107,14 @@ const FinanzasPage = () => {
     try {
       if (cuentaModalMode === 'crear') {
         // 1. Crear la cuenta
-        await axios.post('import.meta.env.VITE_API_URL/api/cuentas', {
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/cuentas`, {
           nombre: nuevaCuenta.nombre,
           tipo: nuevaCuenta.tipo
         });
 
         // 2. Registrar saldo inicial
         if (nuevaCuenta.saldoInicial && parseFloat(nuevaCuenta.saldoInicial) >= 0) {
-          await axios.post('import.meta.env.VITE_API_URL/api/finanzas', {
+          await axios.post(`${import.meta.env.VITE_API_URL}/api/finanzas`, {
             tipoTransaccion: 'Ingreso',
             monto: parseFloat(nuevaCuenta.saldoInicial),
             cuenta: nuevaCuenta.nombre,
@@ -520,4 +520,7 @@ const FinanzasPage = () => {
 };
 
 export default FinanzasPage;
+
+
+
 

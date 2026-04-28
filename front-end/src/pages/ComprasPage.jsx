@@ -37,9 +37,9 @@ const ComprasPage = () => {
     try {
       setLoading(true);
       const [prodRes, provRes, catRes] = await Promise.all([
-        axios.get('import.meta.env.VITE_API_URL/api/productos'),
-        axios.get('import.meta.env.VITE_API_URL/api/proveedores'),
-        axios.get('import.meta.env.VITE_API_URL/api/categorias')
+        axios.get(`${import.meta.env.VITE_API_URL}/api/productos`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/proveedores`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/categorias`)
       ]);
       setProductos(prodRes.data);
       setProveedores(provRes.data);
@@ -120,7 +120,7 @@ const ComprasPage = () => {
     };
 
     try {
-      await axios.post('import.meta.env.VITE_API_URL/api/compras', compraData);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/compras`, compraData);
       alert("¡Compra registrada y stock actualizado con éxito! 📦");
       setCarrito([]);
       setProveedorSeleccionado('');
@@ -144,7 +144,7 @@ const ComprasPage = () => {
         formData.append('imagen', imagenFile);
       }
 
-      const res = await axios.post('import.meta.env.VITE_API_URL/api/productos', formData, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/productos`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -169,7 +169,7 @@ const ComprasPage = () => {
   const handleCrearProveedor = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('import.meta.env.VITE_API_URL/api/proveedores', nuevoProveedor);
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/proveedores`, nuevoProveedor);
       setProveedores([...proveedores, res.data]);
       setProveedorSeleccionado(res.data._id);
       setIsProveedorModalOpen(false);
@@ -426,4 +426,7 @@ const ComprasPage = () => {
 };
 
 export default ComprasPage;
+
+
+
 
