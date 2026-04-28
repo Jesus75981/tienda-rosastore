@@ -426,7 +426,3 @@ const ComprasPage = () => {
 };
 
 export default ComprasPage;
-
-
-
-

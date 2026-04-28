@@ -25,7 +25,7 @@ const LogisticaPage = () => {
 
   const handleUpdate = async (id, field, value) => {
     try {
-      await axios.put(`import.meta.env.VITE_API_URL/api/logistica/${id}`, { [field]: value });
+      await axios.put(`https://tienda-rosastore.onrender.com/api/logistica/${id}`, { [field]: value });
       setEntregas(entregas.map(e => e._id === id ? { ...e, [field]: value } : e));
     } catch (error) {
       console.error("Error al actualizar logística:", error);
@@ -161,7 +161,3 @@ const LogisticaPage = () => {
 };
 
 export default LogisticaPage;
-
-
-
-
