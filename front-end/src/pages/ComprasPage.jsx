@@ -11,6 +11,7 @@ const ComprasPage = () => {
   
   // Estados de Compra
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
+  const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
   const [cuentas, setCuentas] = useState([]);
   const [cuentaOrigen, setCuentaOrigen] = useState('');
@@ -127,6 +128,7 @@ const ComprasPage = () => {
       alert("¡Compra registrada y stock actualizado con éxito! 📦");
       setCarrito([]);
       setProveedorSeleccionado('');
+      setBusquedaProveedor('');
       setMetodoPago('Efectivo');
       fetchData(); // Recargar productos
     } catch (error) {
@@ -173,7 +175,9 @@ const ComprasPage = () => {
     e.preventDefault();
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/proveedores`, nuevoProveedor);
+      const nuevoNombre = res.data.nombreEmpresa || res.data.empresa || res.data.nombre;
       setProveedores([...proveedores, res.data]);
+      setBusquedaProveedor(nuevoNombre);
       setProveedorSeleccionado(res.data._id);
       setIsProveedorModalOpen(false);
       setNuevoProveedor({ nombreEmpresa: '', telefono: '', contacto: '' });
@@ -288,24 +292,31 @@ const ComprasPage = () => {
           {/* Checkout Compras */}
           <div className="p-6 bg-slate-50 border-t border-pink-100">
             <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                  <Truck size={14} /> Proveedor (Obligatorio)
-                </label>
-                <button onClick={() => setIsProveedorModalOpen(true)} className="text-xs text-kitty-pink font-bold hover:underline flex items-center gap-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex justify-between">
+                <span>Proveedor (Obligatorio)</span>
+                <button onClick={() => setIsProveedorModalOpen(true)} className="text-kitty-pink hover:underline flex items-center gap-1">
                   <Plus size={12} /> Nuevo
                 </button>
+              </label>
+              <div className="relative">
+                <input 
+                  type="text"
+                  list="proveedores-list"
+                  placeholder="Buscar proveedor..."
+                  value={busquedaProveedor}
+                  onChange={(e) => {
+                    setBusquedaProveedor(e.target.value);
+                    const prov = proveedores.find(p => (p.nombreEmpresa || p.empresa || p.nombre) === e.target.value);
+                    setProveedorSeleccionado(prov ? prov._id : '');
+                  }}
+                  className="w-full bg-white border border-pink-100 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
+                />
+                <datalist id="proveedores-list">
+                  {proveedores.map(p => (
+                    <option key={p._id} value={p.nombreEmpresa || p.empresa || p.nombre} />
+                  ))}
+                </datalist>
               </div>
-              <select 
-                value={proveedorSeleccionado} 
-                onChange={(e) => setProveedorSeleccionado(e.target.value)}
-                className="w-full bg-white border border-pink-100 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
-              >
-                <option value="">Seleccione un proveedor...</option>
-                {proveedores.map(p => (
-                  <option key={p._id} value={p._id}>{p.empresa || p.nombre}</option>
-                ))}
-              </select>
             </div>
 
             <div className="mb-4">
