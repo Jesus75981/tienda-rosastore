@@ -31,7 +31,7 @@ const ComprasPage = () => {
 
   // Estados Modal Proveedor Rápido
   const [isProveedorModalOpen, setIsProveedorModalOpen] = useState(false);
-  const [nuevoProveedor, setNuevoProveedor] = useState({ nombre: '', telefono: '', empresa: '' });
+  const [nuevoProveedor, setNuevoProveedor] = useState({ nombreEmpresa: '', telefono: '', contacto: '' });
 
   const fetchData = async () => {
     try {
@@ -176,7 +176,7 @@ const ComprasPage = () => {
       setProveedores([...proveedores, res.data]);
       setProveedorSeleccionado(res.data._id);
       setIsProveedorModalOpen(false);
-      setNuevoProveedor({ nombre: '', telefono: '', empresa: '' });
+      setNuevoProveedor({ nombreEmpresa: '', telefono: '', contacto: '' });
       alert("Proveedor registrado rápidamente.");
     } catch (error) {
       console.error(error);
@@ -408,20 +408,20 @@ const ComprasPage = () => {
             </div>
             <form onSubmit={handleCrearProveedor} className="p-6">
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Contacto</label>
-                <input required type="text" value={nuevoProveedor.nombre} onChange={e => setNuevoProveedor({...nuevoProveedor, nombre: e.target.value})} className="w-full border border-pink-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-kitty-pink" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa / Distribuidora *</label>
+                <input required type="text" value={nuevoProveedor.nombreEmpresa} onChange={e => setNuevoProveedor({...nuevoProveedor, nombreEmpresa: e.target.value})} className="w-full border border-pink-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-kitty-pink" />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa / Distribuidora (Opcional)</label>
-                <input type="text" value={nuevoProveedor.empresa} onChange={e => setNuevoProveedor({...nuevoProveedor, empresa: e.target.value})} className="w-full border border-pink-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-kitty-pink" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Contacto (Opcional)</label>
+                <input type="text" value={nuevoProveedor.contacto} onChange={e => setNuevoProveedor({...nuevoProveedor, contacto: e.target.value})} className="w-full border border-pink-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-kitty-pink" />
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Celular (Opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Celular / Teléfono (Opcional)</label>
                 <input type="text" value={nuevoProveedor.telefono} onChange={e => setNuevoProveedor({...nuevoProveedor, telefono: e.target.value})} className="w-full border border-pink-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-kitty-pink" />
               </div>
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setIsProveedorModalOpen(false)} className="px-4 py-2 rounded-lg text-gray-600">Cancelar</button>
-                <button type="submit" className="kitty-button py-2">Registrar</button>
+              <div className="flex justify-end gap-3 pt-4 border-t border-pink-50">
+                <button type="button" onClick={() => setIsProveedorModalOpen(false)} className="px-6 py-2 rounded-full border border-pink-200 text-gray-600 font-medium text-sm">Cancelar</button>
+                <button type="submit" className="kitty-button py-2 text-sm">Guardar Proveedor</button>
               </div>
             </form>
           </div>
