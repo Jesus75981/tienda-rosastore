@@ -37,9 +37,9 @@ const ComprasPage = () => {
     try {
       setLoading(true);
       const [prodRes, provRes, catRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/productos'),
-        axios.get('http://localhost:5000/api/proveedores'),
-        axios.get('http://localhost:5000/api/categorias')
+        axios.get('https://tienda-rosastore.onrender.com/api/productos'),
+        axios.get('https://tienda-rosastore.onrender.com/api/proveedores'),
+        axios.get('https://tienda-rosastore.onrender.com/api/categorias')
       ]);
       setProductos(prodRes.data);
       setProveedores(provRes.data);
@@ -120,7 +120,7 @@ const ComprasPage = () => {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/compras', compraData);
+      await axios.post('https://tienda-rosastore.onrender.com/api/compras', compraData);
       alert("¡Compra registrada y stock actualizado con éxito! 📦");
       setCarrito([]);
       setProveedorSeleccionado('');
@@ -144,7 +144,7 @@ const ComprasPage = () => {
         formData.append('imagen', imagenFile);
       }
 
-      const res = await axios.post('http://localhost:5000/api/productos', formData, {
+      const res = await axios.post('https://tienda-rosastore.onrender.com/api/productos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -169,7 +169,7 @@ const ComprasPage = () => {
   const handleCrearProveedor = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/proveedores', nuevoProveedor);
+      const res = await axios.post('https://tienda-rosastore.onrender.com/api/proveedores', nuevoProveedor);
       setProveedores([...proveedores, res.data]);
       setProveedorSeleccionado(res.data._id);
       setIsProveedorModalOpen(false);

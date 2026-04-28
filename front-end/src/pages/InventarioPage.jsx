@@ -14,7 +14,7 @@ const InventarioPage = () => {
   const fetchProductos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/productos');
+      const res = await axios.get('https://tienda-rosastore.onrender.com/api/productos');
       setProductos(res.data);
     } catch (error) {
       console.error("Error al cargar inventario:", error);
@@ -26,7 +26,7 @@ const InventarioPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar este producto del inventario?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/productos/${id}`);
+        await axios.delete(`https://tienda-rosastore.onrender.com/api/productos/${id}`);
         setProductos(productos.filter(p => p._id !== id));
       } catch (error) {
         console.error("Error al eliminar:", error);
@@ -55,7 +55,7 @@ const InventarioPage = () => {
         submitData.append('imagen', imagenFile);
       }
 
-      const res = await axios.put(`http://localhost:5000/api/productos/${editingId}`, submitData);
+      const res = await axios.put(`https://tienda-rosastore.onrender.com/api/productos/${editingId}`, submitData);
       
       setProductos(productos.map(p => p._id === editingId ? res.data : p));
       setShowModal(false);
@@ -127,7 +127,7 @@ const InventarioPage = () => {
                     <tr key={producto._id} className="hover:bg-pink-50/50 transition-colors border-b border-pink-50 last:border-0">
                       <td className="p-4">
                         {producto.imagen ? (
-                          <img src={`http://localhost:5000${producto.imagen}`} alt="Prod" className="w-12 h-12 rounded-lg object-cover border border-pink-100 shadow-sm" />
+                          <img src={`https://tienda-rosastore.onrender.com${producto.imagen}`} alt="Prod" className="w-12 h-12 rounded-lg object-cover border border-pink-100 shadow-sm" />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-pink-300 border border-pink-100">
                             <Package size={20} />
