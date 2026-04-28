@@ -12,14 +12,14 @@ const ComprasPage = () => {
   // Estados de Compra
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
-  const [cuentaOrigen, setCuentaOrigen] = useState('Caja Tienda');
+  const [cuentas, setCuentas] = useState([]);
+  const [cuentaOrigen, setCuentaOrigen] = useState('');
   
   const metodosPago = [
     { id: 'Efectivo', icon: Banknote },
     { id: 'QR', icon: QrCode },
     { id: 'Transferencia', icon: Banknote },
   ];
-  const cuentas = ['Caja Tienda', 'Banco BCP', 'Banco BNB', 'Banco Union'];
 
   // Estados Modal Producto Nuevo
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
@@ -36,14 +36,17 @@ const ComprasPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [prodRes, provRes, catRes] = await Promise.all([
+      const [prodRes, provRes, catRes, cuenRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_URL}/api/productos`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/proveedores`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/categorias`)
+        axios.get(`${import.meta.env.VITE_API_URL}/api/categorias`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/cuentas`)
       ]);
       setProductos(prodRes.data);
       setProveedores(provRes.data);
       setCategoriasExistentes(catRes.data);
+      setCuentas(cuenRes.data);
+      if (cuenRes.data.length > 0) setCuentaOrigen(cuenRes.data[0].nombre);
     } catch (error) {
       console.error("Error cargando datos:", error);
     } finally {
@@ -312,7 +315,10 @@ const ComprasPage = () => {
                 onChange={(e) => setCuentaOrigen(e.target.value)}
                 className="w-full bg-white border border-pink-100 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm font-medium text-slate-700"
               >
-                {cuentas.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="">Seleccionar cuenta...</option>
+                {cuentas.map(c => (
+                  <option key={c._id} value={c.nombre}>{c.nombre}</option>
+                ))}
               </select>
             </div>
 
