@@ -10,7 +10,7 @@ const ProductosPage = () => {
   const fetchProductos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://tienda-rosastore.onrender.com/api/productos');
+      const res = await axios.get('import.meta.env.VITE_API_URL/api/productos');
       setProductos(res.data);
     } catch (error) {
       console.error("Error al cargar productos:", error);
@@ -59,7 +59,7 @@ const ProductosPage = () => {
           <div key={producto._id} className="kitty-card flex flex-col transition-transform hover:-translate-y-1">
             <div className="bg-pink-50 h-40 flex items-center justify-center border-b border-pink-100 overflow-hidden relative">
               {producto.imagen ? (
-                <img src={`https://tienda-rosastore.onrender.com${producto.imagen}`} alt={producto.nombre} className="w-full h-full object-cover transition-transform hover:scale-105" />
+                <img src={`import.meta.env.VITE_API_URL${producto.imagen}`} alt={producto.nombre} className="w-full h-full object-cover transition-transform hover:scale-105" />
               ) : (
                 <Package size={48} className="text-pink-200" />
               )}
@@ -97,3 +97,4 @@ const ProductosPage = () => {
 };
 
 export default ProductosPage;
+

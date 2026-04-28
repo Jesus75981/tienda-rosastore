@@ -9,8 +9,13 @@ import Inventario from '../models/Inventario.js';
 import Logistica from '../models/Logistica.js';
 import Finanzas from '../models/Finanzas.js';
 import Cuenta from '../models/Cuenta.js';
+import { login, crearAdmin } from '../controllers/authController.js';
 
 const router = express.Router();
+
+// Rutas de autenticación (públicas)
+router.post('/auth/login', login);
+router.post('/auth/setup', crearAdmin); // Solo usar una vez para crear el admin
 
 const models = {
   productos: Producto,

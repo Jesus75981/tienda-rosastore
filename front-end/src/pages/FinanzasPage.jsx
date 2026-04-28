@@ -50,9 +50,9 @@ const FinanzasPage = () => {
       }
 
       const [resResumen, resTrans, resCuentas] = await Promise.all([
-        axios.get(`https://tienda-rosastore.onrender.com/api/finanzas/resumen${query}`),
-        axios.get(`https://tienda-rosastore.onrender.com/api/finanzas`), // Get all transactions (could also pass query, but generic API returns all by default)
-        axios.get(`https://tienda-rosastore.onrender.com/api/cuentas`)
+        axios.get(`import.meta.env.VITE_API_URL/api/finanzas/resumen${query}`),
+        axios.get(`import.meta.env.VITE_API_URL/api/finanzas`), // Get all transactions (could also pass query, but generic API returns all by default)
+        axios.get(`import.meta.env.VITE_API_URL/api/cuentas`)
       ]);
       
       setResumen(resResumen.data);
@@ -88,7 +88,7 @@ const FinanzasPage = () => {
   const handleCrearTransaccion = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://tienda-rosastore.onrender.com/api/finanzas', {
+      await axios.post('import.meta.env.VITE_API_URL/api/finanzas', {
         ...nuevaTransaccion,
         monto: parseFloat(nuevaTransaccion.monto)
       });
@@ -107,14 +107,14 @@ const FinanzasPage = () => {
     try {
       if (cuentaModalMode === 'crear') {
         // 1. Crear la cuenta
-        await axios.post('https://tienda-rosastore.onrender.com/api/cuentas', {
+        await axios.post('import.meta.env.VITE_API_URL/api/cuentas', {
           nombre: nuevaCuenta.nombre,
           tipo: nuevaCuenta.tipo
         });
 
         // 2. Registrar saldo inicial
         if (nuevaCuenta.saldoInicial && parseFloat(nuevaCuenta.saldoInicial) >= 0) {
-          await axios.post('https://tienda-rosastore.onrender.com/api/finanzas', {
+          await axios.post('import.meta.env.VITE_API_URL/api/finanzas', {
             tipoTransaccion: 'Ingreso',
             monto: parseFloat(nuevaCuenta.saldoInicial),
             cuenta: nuevaCuenta.nombre,
@@ -125,7 +125,7 @@ const FinanzasPage = () => {
         alert('Cuenta registrada con éxito. 🎀');
       } else {
         // Editar cuenta
-        await axios.put(`https://tienda-rosastore.onrender.com/api/cuentas/${cuentaEditId}`, {
+        await axios.put(`import.meta.env.VITE_API_URL/api/cuentas/${cuentaEditId}`, {
           nombre: nuevaCuenta.nombre,
           tipo: nuevaCuenta.tipo
         });
@@ -144,7 +144,7 @@ const FinanzasPage = () => {
   const handleEliminarCuenta = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta cuenta? Los movimientos asociados seguirán existiendo en el historial.')) {
       try {
-        await axios.delete(`https://tienda-rosastore.onrender.com/api/cuentas/${id}`);
+        await axios.delete(`import.meta.env.VITE_API_URL/api/cuentas/${id}`);
         fetchData();
         alert('Cuenta eliminada.');
       } catch (error) {
@@ -520,3 +520,4 @@ const FinanzasPage = () => {
 };
 
 export default FinanzasPage;
+

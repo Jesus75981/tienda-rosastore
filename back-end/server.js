@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import compression from 'compression';
 
 dotenv.config();
 
@@ -12,8 +13,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+app.use(compression()); // Gzip para respuestas más rápidas
 app.use(cors({
-  origin: '*', // Permite peticiones desde Vercel y cualquier origen
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

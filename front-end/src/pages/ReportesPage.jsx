@@ -10,7 +10,7 @@ const ReportesPage = () => {
     const fetchReportes = async () => {
       try {
         // En el futuro podemos cargar compras también
-        const res = await axios.get('https://tienda-rosastore.onrender.com/api/ventas');
+        const res = await axios.get('import.meta.env.VITE_API_URL/api/ventas');
         // Ordenar por fecha descendente
         const ventasOrdenadas = res.data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         setVentas(ventasOrdenadas);
@@ -130,3 +130,4 @@ const ReportesPage = () => {
 };
 
 export default ReportesPage;
+

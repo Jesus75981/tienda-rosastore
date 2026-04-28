@@ -32,9 +32,9 @@ const VentasPage = () => {
       try {
         setLoading(true);
         const [prodRes, cliRes, cuentaRes] = await Promise.all([
-          axios.get('https://tienda-rosastore.onrender.com/api/productos'),
-          axios.get('https://tienda-rosastore.onrender.com/api/clientes'),
-          axios.get('https://tienda-rosastore.onrender.com/api/cuentas')
+          axios.get('import.meta.env.VITE_API_URL/api/productos'),
+          axios.get('import.meta.env.VITE_API_URL/api/clientes'),
+          axios.get('import.meta.env.VITE_API_URL/api/cuentas')
         ]);
         // Solo mostrar productos con stock
         setProductos(prodRes.data.filter(p => p.stock > 0));
@@ -124,7 +124,7 @@ const VentasPage = () => {
     };
 
     try {
-      await axios.post('https://tienda-rosastore.onrender.com/api/ventas', ventaData);
+      await axios.post('import.meta.env.VITE_API_URL/api/ventas', ventaData);
       alert("¡Venta registrada con éxito! 🎀");
       // Limpiar carrito y actualizar stock
       setCarrito([]);
@@ -136,7 +136,7 @@ const VentasPage = () => {
       setDireccionEntrega('');
       
       // Recargar productos para actualizar stock
-      const prodRes = await axios.get('https://tienda-rosastore.onrender.com/api/productos');
+      const prodRes = await axios.get('import.meta.env.VITE_API_URL/api/productos');
       setProductos(prodRes.data.filter(p => p.stock > 0));
     } catch (error) {
       console.error("Error al registrar venta:", error);
@@ -147,7 +147,7 @@ const VentasPage = () => {
   const handleCrearCliente = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('https://tienda-rosastore.onrender.com/api/clientes', nuevoCliente);
+      const res = await axios.post('import.meta.env.VITE_API_URL/api/clientes', nuevoCliente);
       setClientes([...clientes, res.data]);
       setClienteSeleccionado(res.data._id);
       setIsClienteModalOpen(false);
@@ -404,3 +404,4 @@ const VentasPage = () => {
 };
 
 export default VentasPage;
+
