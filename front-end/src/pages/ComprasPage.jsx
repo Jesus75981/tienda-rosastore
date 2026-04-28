@@ -113,6 +113,10 @@ const ComprasPage = () => {
     if (carrito.length === 0) return alert("La lista de ingreso está vacía");
     if (!proveedorSeleccionado) return alert("Debes seleccionar un proveedor");
     
+    if (!window.confirm(`¿Estás seguro de registrar esta compra por un total de Bs. ${totalCarrito.toFixed(2)}?`)) {
+      return;
+    }
+
     const compraData = {
       proveedor: proveedorSeleccionado,
       productos: carrito.map(item => ({

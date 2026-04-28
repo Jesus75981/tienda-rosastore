@@ -30,7 +30,7 @@ const models = {
 };
 
 import { registrarVenta, anularVenta } from '../controllers/ventaController.js';
-import { registrarCompra } from '../controllers/compraController.js';
+import { registrarCompra, anularCompra } from '../controllers/compraController.js';
 import multer from 'multer';
 import path from 'path';
 
@@ -49,6 +49,7 @@ const upload = multer({ storage: storage });
 router.post('/ventas', registrarVenta);
 router.put('/ventas/:id/anular', anularVenta);
 router.post('/compras', registrarCompra);
+router.put('/compras/:id/anular', anularCompra);
 
 import { getResumenFinanciero } from '../controllers/finanzasController.js';
 router.get('/finanzas/resumen', getResumenFinanciero);

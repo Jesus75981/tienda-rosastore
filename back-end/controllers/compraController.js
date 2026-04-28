@@ -49,3 +49,43 @@ export const registrarCompra = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const anularCompra = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const compra = await Compra.findById(id);
+
+    if (!compra) return res.status(404).json({ message: 'Compra no encontrada' });
+    if (compra.estado === 'Anulada') return res.status(400).json({ message: 'La compra ya está anulada' });
+
+    // 1. Revertir Inventario (Restar lo que se compró)
+    for (let item of compra.productos) {
+      const producto = await Producto.findById(item.producto);
+      if (producto) {
+        producto.stock -= item.cantidad;
+        if (producto.stock < 0) producto.stock = 0; // Evitar stock negativo si ya se vendió
+        await producto.save();
+      }
+    }
+
+    // 2. Revertir Finanzas (Devolver el dinero como un ingreso por devolución)
+    const devolucionFinanzas = new Finanzas({
+      tipoTransaccion: 'Ingreso',
+      monto: compra.total,
+      cuenta: compra.cuentaOrigen || 'Caja Tienda',
+      categoria: 'Devolución',
+      descripcion: `Anulación de compra: ${compra._id}`,
+      referenciaId: compra._id,
+      referenciaModelo: 'Compra'
+    });
+    await devolucionFinanzas.save();
+
+    // 3. Marcar compra como anulada
+    compra.estado = 'Anulada';
+    await compra.save();
+
+    res.status(200).json({ message: "Compra anulada, stock y dinero revertidos." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

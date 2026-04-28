@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw } from 'lucide-react';
 
 const ReportesPage = () => {
   const [ventas, setVentas] = useState([]);
@@ -8,28 +8,42 @@ const ReportesPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [resVentas, resCompras] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/ventas`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/compras`)
+      ]);
+      
+      setVentas(resVentas.data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
+      setCompras(resCompras.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+    } catch (error) {
+      console.error("Error al cargar reportes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [resVentas, resCompras] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/api/ventas`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/compras`)
-        ]);
-        
-        setVentas(resVentas.data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
-        setCompras(resCompras.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-      } catch (error) {
-        console.error("Error al cargar reportes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
+  const handleAnularCompra = async (id) => {
+    if (window.confirm("¿Estás seguro de ANULAR esta compra? Se descontará el stock ingresado y se devolverá el dinero a la caja como una devolución.")) {
+      try {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/compras/${id}/anular`);
+        alert("Compra anulada con éxito. Stock y Dinero revertidos. 🔄");
+        fetchData(); // Recargar datos
+      } catch (error) {
+        console.error(error);
+        alert("Error al anular compra.");
+      }
+    }
+  };
+
   const totalVendido = ventas.reduce((sum, v) => sum + (v.estado !== 'Anulada' ? v.total : 0), 0);
-  const totalComprado = compras.reduce((sum, c) => sum + c.total, 0);
+  const totalComprado = compras.reduce((sum, c) => sum + (c.estado !== 'Anulada' ? c.total : 0), 0);
 
   if (loading) return <div className="p-8 text-center text-kitty-pink font-bold">Generando reportes maestros... 🎀📊</div>;
 
@@ -61,7 +75,7 @@ const ReportesPage = () => {
             <div className="p-2 bg-rose-50 text-rose-500 rounded-xl"><ShoppingCart size={20} /></div>
           </div>
           <p className="text-2xl font-black text-slate-800">Bs. {totalComprado.toFixed(2)}</p>
-          <p className="text-xs text-slate-400 mt-1">{compras.length} compras a proveedores</p>
+          <p className="text-xs text-slate-400 mt-1">{compras.filter(c => c.estado !== 'Anulada').length} compras activas</p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -150,12 +164,13 @@ const ReportesPage = () => {
                   <th className="p-5 border-b border-slate-100">Proveedor</th>
                   <th className="p-5 border-b border-slate-100 text-right">Inversión</th>
                   <th className="p-5 border-b border-slate-100">Productos</th>
-                  <th className="p-5 border-b border-slate-100 text-center">Status</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Estado</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {compras.map(c => (
-                  <tr key={c._id} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                  <tr key={c._id} className={`hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${c.estado === 'Anulada' ? 'opacity-50' : ''}`}>
                     <td className="p-5">
                       <p className="text-sm font-bold text-slate-700">{new Date(c.createdAt).toLocaleDateString()}</p>
                     </td>
@@ -170,7 +185,20 @@ const ReportesPage = () => {
                       <span className="text-xs font-bold text-slate-500">{c.productos?.length || 0} items recibidos</span>
                     </td>
                     <td className="p-5 text-center">
-                      <span className="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase">Recibido</span>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${c.estado === 'Anulada' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                        {c.estado || 'Recibido'}
+                      </span>
+                    </td>
+                    <td className="p-5 text-center">
+                      {c.estado !== 'Anulada' && (
+                        <button 
+                          onClick={() => handleAnularCompra(c._id)}
+                          className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                          title="Anular Compra"
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
