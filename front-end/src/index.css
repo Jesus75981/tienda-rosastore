@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-kitty-cream text-slate-800 font-sans m-0 p-0;
+  }
+  
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: block;
+    text-align: left;
+    border: none;
+  }
+}
+
+@layer components {
+  .kitty-card {
+    @apply bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden;
+  }
+  .kitty-button {
+    @apply bg-kitty-pink hover:bg-kitty-rose text-white font-bold py-2 px-4 rounded-full shadow transition-colors duration-300;
+  }
+}
