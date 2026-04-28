@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Truck, Phone, Mail, MapPin, Search, Plus, X, List, ExternalLink, Calendar, Package } from 'lucide-react';
+import { Truck, Phone, Mail, MapPin, Search, Plus, X, List, ExternalLink, Calendar, Package, Edit2, Trash2 } from 'lucide-react';
 
 const ProveedoresPage = () => {
   const [proveedores, setProveedores] = useState([]);
@@ -11,6 +11,8 @@ const ProveedoresPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
+  const [modalMode, setModalMode] = useState('crear'); // crear, editar
+  const [editId, setEditId] = useState(null);
   
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombreEmpresa: '',
@@ -41,18 +43,57 @@ const ProveedoresPage = () => {
     fetchData();
   }, []);
 
-  const handleCrearProveedor = async (e) => {
+  const handleGuardarProveedor = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/proveedores`, nuevoProveedor);
+      if (modalMode === 'crear') {
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/proveedores`, nuevoProveedor);
+        alert("Proveedor registrado con éxito. 🎀");
+      } else {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/proveedores/${editId}`, nuevoProveedor);
+        alert("Proveedor actualizado con éxito. 📝");
+      }
       fetchData();
       setIsModalOpen(false);
       setNuevoProveedor({ nombreEmpresa: '', contacto: '', email: '', telefono: '', direccion: '', categoriaSuministro: '' });
-      alert("Proveedor registrado con éxito. 🎀");
     } catch (error) {
       console.error(error);
-      alert("Error al registrar proveedor.");
+      alert("Error al guardar proveedor.");
     }
+  };
+
+  const handleEliminarProveedor = async (id) => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar este proveedor? Esto no borrará sus compras pasadas pero ya no aparecerá en la lista.")) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/proveedores/${id}`);
+        fetchData();
+        alert("Proveedor eliminado. 🗑️");
+      } catch (error) {
+        console.error(error);
+        alert("Error al eliminar el proveedor.");
+      }
+    }
+  };
+
+  const abrirModalCrear = () => {
+    setModalMode('crear');
+    setEditId(null);
+    setNuevoProveedor({ nombreEmpresa: '', contacto: '', email: '', telefono: '', direccion: '', categoriaSuministro: '' });
+    setIsModalOpen(true);
+  };
+
+  const abrirModalEditar = (p) => {
+    setModalMode('editar');
+    setEditId(p._id);
+    setNuevoProveedor({
+      nombreEmpresa: p.nombreEmpresa || p.nombre || '',
+      contacto: p.contacto || '',
+      email: p.email || '',
+      telefono: p.telefono || '',
+      direccion: p.direccion || '',
+      categoriaSuministro: p.categoriaSuministro || ''
+    });
+    setIsModalOpen(true);
   };
 
   const verDetalleCompras = (proveedor) => {
@@ -77,7 +118,7 @@ const ProveedoresPage = () => {
           </h1>
           <p className="text-slate-500 font-medium">Gestión y control de suministros para Rosestore</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="kitty-button flex items-center gap-2">
+        <button onClick={abrirModalCrear} className="kitty-button flex items-center gap-2">
           <Plus size={20} /> Registrar Proveedor
         </button>
       </div>
@@ -104,12 +145,10 @@ const ProveedoresPage = () => {
               
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-white rounded-2xl border border-pink-100 flex items-center justify-center text-kitty-pink shadow-sm">
-                    <Truck size={28} />
+                  <div className="flex gap-2">
+                    <button onClick={() => abrirModalEditar(p)} className="p-2 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-sm"><Edit2 size={16} /></button>
+                    <button onClick={() => handleEliminarProveedor(p._id)} className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
                   </div>
-                  <span className="text-[10px] font-black bg-pink-100 text-kitty-pink px-2 py-1 rounded-full uppercase">
-                    {p.categoriaSuministro || 'General'}
-                  </span>
                 </div>
 
                 <h3 className="text-xl font-bold text-slate-800 mb-1">{p.nombreEmpresa || p.nombre || 'Empresa S/N'}</h3>
@@ -146,10 +185,10 @@ const ProveedoresPage = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-pink-100">
             <div className="bg-kitty-light px-8 py-6 flex justify-between items-center border-b border-pink-100">
-              <h2 className="text-2xl font-black text-kitty-dark">Registrar Proveedor ✨</h2>
+              <h2 className="text-2xl font-black text-kitty-dark">{modalMode === 'crear' ? 'Registrar Proveedor ✨' : 'Editar Proveedor 📝'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-kitty-pink transition-colors"><X size={28} /></button>
             </div>
-            <form onSubmit={handleCrearProveedor} className="p-8">
+            <form onSubmit={handleGuardarProveedor} className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-1">Nombre de la Empresa *</label>
@@ -178,7 +217,7 @@ const ProveedoresPage = () => {
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-slate-50">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-2 rounded-full border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors">Cancelar</button>
-                <button type="submit" className="kitty-button">Guardar Registro</button>
+                <button type="submit" className="kitty-button">{modalMode === 'crear' ? 'Guardar Registro' : 'Actualizar Datos'}</button>
               </div>
             </form>
           </div>
