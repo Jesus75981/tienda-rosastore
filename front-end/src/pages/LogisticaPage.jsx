@@ -25,7 +25,7 @@ const LogisticaPage = () => {
 
   const handleUpdate = async (id, field, value) => {
     try {
-      await axios.put(`https://tienda-rosastore.onrender.com/api/logistica/${id}`, { [field]: value });
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/logistica/${id}`, { [field]: value });
       setEntregas(entregas.map(e => e._id === id ? { ...e, [field]: value } : e));
     } catch (error) {
       console.error("Error al actualizar logística:", error);
@@ -42,11 +42,17 @@ const LogisticaPage = () => {
 
   const getStatusColor = (estado) => {
     switch(estado) {
-      case 'Preparando': return 'bg-yellow-100 text-yellow-700';
-      case 'En Camino': return 'bg-blue-100 text-blue-700';
-      case 'Entregado': return 'bg-green-100 text-green-700';
-      case 'Devuelto': return 'bg-red-100 text-red-700';
+      case 'Pendiente': return 'bg-amber-100 text-amber-700';
+      case 'Recibido':  return 'bg-emerald-100 text-emerald-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusIcon = (estado) => {
+    switch(estado) {
+      case 'Pendiente': return '⏳';
+      case 'Recibido':  return '✅';
+      default: return '📦';
     }
   };
 
@@ -114,14 +120,25 @@ const LogisticaPage = () => {
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-kitty-pink text-sm flex items-center gap-1">
-                        <Truck size={14}/>
+                        {entrega.tipoEnvio === 'Envio a Domicilio' && <span>🏠</span>}
+                        {entrega.tipoEnvio === 'Envio Nacional' && <span>🚚</span>}
+                        {entrega.tipoEnvio === 'Punto de Entrega' && <span>📍</span>}
                         {entrega.tipoEnvio}
                       </p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <MapPin size={12} /> {entrega.direccionEntrega || 'Sin dirección registrada'}
-                      </p>
+                      {entrega.tipoEnvio === 'Punto de Entrega' ? (
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <MapPin size={12} /> {entrega.puntoEntrega || 'Sin punto registrado'}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <MapPin size={12} /> {entrega.direccionEntrega || 'Sin dirección registrada'}
+                        </p>
+                      )}
                       {entrega.costoEnvio > 0 && (
                         <p className="text-xs font-bold text-slate-600 mt-1">Costo: Bs. {entrega.costoEnvio}</p>
+                      )}
+                      {entrega.tipoEnvio === 'Punto de Entrega' && (
+                        <p className="text-xs font-bold text-emerald-600 mt-1">📍 Sin costo de envío</p>
                       )}
                     </td>
                     <td className="p-4 text-center">
@@ -130,10 +147,8 @@ const LogisticaPage = () => {
                         onChange={(e) => handleUpdate(entrega._id, 'estadoEntrega', e.target.value)}
                         className={`text-xs font-bold px-3 py-1.5 rounded-full outline-none border-2 border-transparent focus:border-pink-300 appearance-none cursor-pointer ${getStatusColor(entrega.estadoEntrega)}`}
                       >
-                        <option value="Preparando">Preparando</option>
-                        <option value="En Camino">En Camino</option>
-                        <option value="Entregado">Entregado</option>
-                        <option value="Devuelto">Devuelto</option>
+                        <option value="Pendiente">⏳ Pendiente</option>
+                        <option value="Recibido">✅ Recibido</option>
                       </select>
                     </td>
                     <td className="p-4">

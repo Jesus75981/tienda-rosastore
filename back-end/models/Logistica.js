@@ -4,15 +4,16 @@ const logisticaSchema = new mongoose.Schema({
   venta: { type: mongoose.Schema.Types.ObjectId, ref: 'Venta', required: true },
   tipoEnvio: { 
     type: String, 
-    enum: ['Envio a Domicilio', 'Envio Nacional'], 
+    enum: ['Envio a Domicilio', 'Envio Nacional', 'Punto de Entrega'], 
     default: 'Envio a Domicilio' 
   },
   direccionEntrega: { type: String, default: '' },
+  puntoEntrega: { type: String, default: '' }, // Descripción del punto de recogida coordinado
   costoEnvio: { type: Number, default: 0 },
   estadoEntrega: { 
     type: String, 
-    enum: ['Preparando', 'En Camino', 'Entregado', 'Devuelto'], 
-    default: 'Preparando' 
+    enum: ['Pendiente', 'Recibido'], 
+    default: 'Pendiente' 
   },
   fechaEstimada: { type: Date },
   fechaEntregaReal: { type: Date },

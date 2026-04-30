@@ -55,8 +55,9 @@ export const registrarVenta = async (req, res) => {
         venta: ventaGuardada._id,
         tipoEnvio: logistica.tipoEnvio || 'Envio a Domicilio',
         direccionEntrega: logistica.direccionEntrega || '',
+        puntoEntrega: logistica.puntoEntrega || '',
         costoEnvio: logistica.costoEnvio || 0,
-        estadoEntrega: 'Preparando'
+        estadoEntrega: 'Pendiente'
       });
       await nuevaLogistica.save();
     }

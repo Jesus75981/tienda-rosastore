@@ -22,6 +22,11 @@ const VentasPage = () => {
   const [tipoEnvio, setTipoEnvio] = useState('Envio a Domicilio');
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [direccionEntrega, setDireccionEntrega] = useState('');
+  const [puntoEntrega, setPuntoEntrega] = useState('');
+
+  // Helpers de tipo de envío
+  const esPuntoEntrega = tipoEnvio === 'Punto de Entrega';
+  const esEnvioNacional = tipoEnvio === 'Envio Nacional';
   
   const metodosPago = [
     { id: 'Efectivo', icon: Banknote },
@@ -100,12 +105,18 @@ const VentasPage = () => {
   };
 
   const totalCarrito = carrito.reduce((sum, item) => sum + item.subtotal, 0);
-  const totalVenta = totalCarrito + Number(costoEnvio);
+  // En Punto de Entrega no hay costo de envío
+  const costoEnvioEfectivo = esPuntoEntrega ? 0 : Number(costoEnvio);
+  const totalVenta = totalCarrito + costoEnvioEfectivo;
 
   const confirmarVenta = async () => {
     if (carrito.length === 0) return alert("El carrito está vacío");
-    if (!direccionEntrega.trim()) {
+    // Validar campo según tipo de envío
+    if (!esPuntoEntrega && !direccionEntrega.trim()) {
       return alert("Debe ingresar una dirección de entrega.");
+    }
+    if (esPuntoEntrega && !puntoEntrega.trim()) {
+      return alert("Debe ingresar la descripción del punto de entrega.");
     }
     
     const ventaData = {
@@ -121,8 +132,9 @@ const VentasPage = () => {
       cuentaDestino,
       logistica: {
         tipoEnvio,
-        costoEnvio: Number(costoEnvio),
-        direccionEntrega
+        costoEnvio: costoEnvioEfectivo,
+        direccionEntrega: esPuntoEntrega ? '' : direccionEntrega,
+        puntoEntrega: esPuntoEntrega ? puntoEntrega : ''
       }
     };
 
@@ -137,6 +149,7 @@ const VentasPage = () => {
       setTipoEnvio('Envio a Domicilio');
       setCostoEnvio(0);
       setDireccionEntrega('');
+      setPuntoEntrega('');
       
       // Recargar productos para actualizar stock
       const prodRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`);
@@ -303,35 +316,76 @@ const VentasPage = () => {
               </label>
               <select 
                 value={tipoEnvio} 
-                onChange={(e) => setTipoEnvio(e.target.value)}
+                onChange={(e) => { setTipoEnvio(e.target.value); setCostoEnvio(0); setDireccionEntrega(''); setPuntoEntrega(''); }}
                 className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm font-medium mb-3"
               >
-                <option value="Envio a Domicilio">Envío a Domicilio</option>
-                <option value="Envio Nacional">Envío Nacional</option>
+                <option value="Envio a Domicilio">🏠 Envío a Domicilio</option>
+                <option value="Envio Nacional">🚚 Envío Nacional</option>
+                <option value="Punto de Entrega">📍 Punto de Entrega</option>
               </select>
 
+              {/* Badge informativo según tipo */}
+              {tipoEnvio === 'Envio Nacional' && (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-lg px-3 py-2 mb-3">
+                  <Truck size={12} />
+                  <span>La tienda cobra y paga al servicio de encomienda</span>
+                </div>
+              )}
+              {esPuntoEntrega && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg px-3 py-2 mb-3">
+                  <MapPin size={12} />
+                  <span>Sin costo de envío — el cliente recoge en punto coordinado</span>
+                </div>
+              )}
+
               <div className="space-y-3 mt-2">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Costo de Envío (Bs)</label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    value={costoEnvio} 
-                    onChange={(e) => setCostoEnvio(e.target.value)}
-                    className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><MapPin size={12}/> Dirección de Entrega</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Av. Principal #123"
-                    value={direccionEntrega} 
-                    onChange={(e) => setDireccionEntrega(e.target.value)}
-                    className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
-                    required
-                  />
-                </div>
+                {/* Campo Costo de Envío: solo si NO es Punto de Entrega */}
+                {!esPuntoEntrega && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Costo de Envío (Bs.)</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={costoEnvio} 
+                      onChange={(e) => setCostoEnvio(e.target.value)}
+                      className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
+
+                {/* Campo Dirección: Domicilio y Nacional */}
+                {!esPuntoEntrega && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <MapPin size={12}/>
+                      {esEnvioNacional ? 'Ciudad / Departamento destino' : 'Dirección de Entrega'}
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder={esEnvioNacional ? 'Ej. Santa Cruz, Beni...' : 'Ej. Av. Principal #123'}
+                      value={direccionEntrega} 
+                      onChange={(e) => setDireccionEntrega(e.target.value)}
+                      className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Campo Punto de Entrega */}
+                {esPuntoEntrega && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <MapPin size={12}/> Descripción del Punto de Entrega
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Farmacia Central, esquina calle X"
+                      value={puntoEntrega} 
+                      onChange={(e) => setPuntoEntrega(e.target.value)}
+                      className="w-full bg-white border border-pink-200 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -352,17 +406,25 @@ const VentasPage = () => {
 
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-slate-500 font-medium">Subtotal</span>
+                <span className="text-sm text-slate-500 font-medium">Subtotal productos</span>
                 <span className="font-bold text-slate-700">Bs. {totalCarrito.toFixed(2)}</span>
               </div>
-              {Number(costoEnvio) > 0 && (
+              {!esPuntoEntrega && Number(costoEnvio) > 0 && (
                 <div className="flex justify-between items-center mb-2 text-kitty-pink">
-                  <span className="text-sm font-medium">+ Envío</span>
+                  <span className="text-sm font-medium">
+                    {esEnvioNacional ? '🚚 + Encomienda' : '🏠 + Envío'}
+                  </span>
                   <span className="font-bold">Bs. {Number(costoEnvio).toFixed(2)}</span>
                 </div>
               )}
+              {esPuntoEntrega && (
+                <div className="flex justify-between items-center mb-2 text-emerald-600">
+                  <span className="text-sm font-medium">📍 Sin costo de envío</span>
+                  <span className="font-bold">Bs. 0.00</span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                <span className="text-lg text-slate-600 font-medium">Total a Pagar</span>
+                <span className="text-lg text-slate-600 font-medium">Total a Cobrar</span>
                 <span className="text-3xl font-black text-kitty-dark">Bs. {totalVenta.toFixed(2)}</span>
               </div>
             </div>
