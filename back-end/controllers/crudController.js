@@ -2,8 +2,45 @@ export const createCrudController = (Model) => {
   return {
     getAll: async (req, res) => {
       try {
-        const docs = await Model.find();
-        res.status(200).json(docs);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 0; // 0 significa sin limite
+        const search = req.query.search || '';
+        
+        let query = {};
+        
+        // Si hay término de búsqueda, buscar en todos los campos string del modelo
+        if (search) {
+          const searchRegex = new RegExp(search, 'i');
+          const searchConditions = [];
+          
+          Object.keys(Model.schema.paths).forEach(path => {
+            if (Model.schema.paths[path].instance === 'String') {
+              searchConditions.push({ [path]: searchRegex });
+            }
+          });
+          
+          if (searchConditions.length > 0) {
+            query = { $or: searchConditions };
+          }
+        }
+
+        if (limit > 0) {
+          const skip = (page - 1) * limit;
+          const [docs, total] = await Promise.all([
+            Model.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
+            Model.countDocuments(query)
+          ]);
+          res.status(200).json({
+            data: docs,
+            totalItems: total,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page
+          });
+        } else {
+          // Compatibilidad: si no hay limit, devuelve solo el array
+          const docs = await Model.find(query).sort({ createdAt: -1 });
+          res.status(200).json(docs);
+        }
       } catch (error) {
         res.status(500).json({ message: error.message });
       }

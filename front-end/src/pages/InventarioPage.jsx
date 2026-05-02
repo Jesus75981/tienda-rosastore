@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Package, Search, AlertTriangle, Edit, Trash2, X } from 'lucide-react';
+import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { TableSkeleton } from '../components/Skeleton.jsx';
 
 const InventarioPage = () => {
   const [productos, setProductos] = useState([]);
@@ -11,13 +13,27 @@ const InventarioPage = () => {
   const [imagenFile, setImagenFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 15;
+
   const fetchProductos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`);
-      setProductos(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`, {
+        params: { page, limit, search: searchTerm }
+      });
+      if (res.data.data) {
+        setProductos(res.data.data);
+        setTotalPages(res.data.totalPages);
+      } else {
+        setProductos(res.data);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error("Error al cargar inventario:", error);
+      toast.error("Error al cargar el inventario");
     } finally {
       setLoading(false);
     }
@@ -28,9 +44,10 @@ const InventarioPage = () => {
       try {
         await axios.delete(`${import.meta.env.VITE_API_URL}/api/productos/${id}`);
         setProductos(productos.filter(p => p._id !== id));
+        toast.success("Producto eliminado exitosamente");
       } catch (error) {
         console.error("Error al eliminar:", error);
-        alert("Error al eliminar el producto");
+        toast.error("Error al eliminar el producto");
       }
     }
   };
@@ -59,22 +76,24 @@ const InventarioPage = () => {
       
       setProductos(productos.map(p => p._id === editingId ? res.data : p));
       setShowModal(false);
+      toast.success("Producto actualizado exitosamente 🎀");
     } catch (error) {
       console.error("Error al actualizar:", error);
-      alert("Error al actualizar el producto");
+      toast.error("Error al actualizar el producto");
     }
   };
 
   useEffect(() => {
-    fetchProductos();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchProductos();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, page]);
 
-  const productosFiltrados = productos.filter(p => 
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) return <div className="p-8 text-center text-kitty-pink">Cargando maestro de inventario... 🎀</div>;
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1);
+  };
 
   return (
     <div className="p-8">
@@ -94,91 +113,118 @@ const InventarioPage = () => {
           placeholder="Buscar por código, nombre o marca..." 
           className="flex-1 outline-none text-slate-700 bg-transparent"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
         />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
-                <th className="p-4 border-b border-pink-100 font-bold w-16">Img</th>
-                <th className="p-4 border-b border-pink-100 font-bold">Código, Producto y Marca</th>
-                <th className="p-4 border-b border-pink-100 font-bold">Categoría</th>
-                <th className="p-4 border-b border-pink-100 font-bold text-center">Stock Físico</th>
-                <th className="p-4 border-b border-pink-100 font-bold text-right">Costo Unit. (Bs)</th>
-                <th className="p-4 border-b border-pink-100 font-bold text-right">Costo Total (Bs)</th>
-                <th className="p-4 border-b border-pink-100 font-bold text-right">Venta (Bs)</th>
-                <th className="p-4 border-b border-pink-100 font-bold text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-500">
-                    No hay productos registrados en el inventario. 🎀
-                  </td>
+      {loading ? (
+        <TableSkeleton rows={10} columns={8} />
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
+                  <th className="p-4 border-b border-pink-100 font-bold w-16">Img</th>
+                  <th className="p-4 border-b border-pink-100 font-bold">Código, Producto y Marca</th>
+                  <th className="p-4 border-b border-pink-100 font-bold">Categoría</th>
+                  <th className="p-4 border-b border-pink-100 font-bold text-center">Stock Físico</th>
+                  <th className="p-4 border-b border-pink-100 font-bold text-right">Costo Unit. (Bs)</th>
+                  <th className="p-4 border-b border-pink-100 font-bold text-right">Costo Total (Bs)</th>
+                  <th className="p-4 border-b border-pink-100 font-bold text-right">Venta (Bs)</th>
+                  <th className="p-4 border-b border-pink-100 font-bold text-center">Acciones</th>
                 </tr>
-              ) : (
-                productosFiltrados.map(producto => {
-                  const stockCritico = producto.stock <= producto.stockMinimo;
-                  return (
-                    <tr key={producto._id} className="hover:bg-pink-50/50 transition-colors border-b border-pink-50 last:border-0">
-                      <td className="p-4">
-                        {producto.imagen ? (
-                          <img src={producto.imagen?.startsWith('http') ? producto.imagen : `${import.meta.env.VITE_API_URL}${producto.imagen}`} alt="Prod" className="w-12 h-12 rounded-lg object-cover border border-pink-100 shadow-sm" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-pink-300 border border-pink-100">
-                            <Package size={20} />
+              </thead>
+              <tbody>
+                {productos.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="p-8 text-center text-gray-500">
+                      No hay productos registrados en el inventario. 🎀
+                    </td>
+                  </tr>
+                ) : (
+                  productos.map(producto => {
+                    const stockCritico = producto.stock <= producto.stockMinimo;
+                    return (
+                      <tr key={producto._id} className="hover:bg-pink-50/50 transition-colors border-b border-pink-50 last:border-0">
+                        <td className="p-4">
+                          {producto.imagen ? (
+                            <img src={producto.imagen?.startsWith('http') ? producto.imagen : `${import.meta.env.VITE_API_URL}${producto.imagen}`} alt="Prod" className="w-12 h-12 rounded-lg object-cover border border-pink-100 shadow-sm" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-pink-300 border border-pink-100">
+                              <Package size={20} />
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <p className="font-bold text-slate-800">
+                            {producto.codigo && <span className="text-pink-500 text-xs mr-2">{producto.codigo}</span>}
+                            {producto.nombre}
+                          </p>
+                          <p className="text-xs text-gray-500">{producto.marca || 'Sin marca'}</p>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-xs font-bold text-kitty-rose bg-pink-50 px-2 py-1 rounded-full">
+                            {producto.categoria || 'General'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${stockCritico ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                            {stockCritico && <AlertTriangle size={14} />}
+                            {producto.stock}
                           </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <p className="font-bold text-slate-800">
-                          {producto.codigo && <span className="text-pink-500 text-xs mr-2">{producto.codigo}</span>}
-                          {producto.nombre}
-                        </p>
-                        <p className="text-xs text-gray-500">{producto.marca || 'Sin marca'}</p>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-xs font-bold text-kitty-rose bg-pink-50 px-2 py-1 rounded-full">
-                          {producto.categoria || 'General'}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${stockCritico ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
-                          {stockCritico && <AlertTriangle size={14} />}
-                          {producto.stock}
-                        </div>
-                      </td>
-                      <td className="p-4 text-slate-600 font-semibold text-right">
-                        Bs. {producto.precioCompra.toFixed(2)}
-                      </td>
-                      <td className="p-4 text-slate-600 font-bold text-right bg-slate-50/50">
-                        Bs. {(producto.stock * producto.precioCompra).toFixed(2)}
-                      </td>
-                      <td className="p-4 text-kitty-pink font-bold text-right">
-                        Bs. {producto.precioVenta.toFixed(2)}
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEdit(producto)} className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100 transition-colors" title="Editar">
-                            <Edit size={16} />
-                          </button>
-                          <button onClick={() => handleDelete(producto._id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Eliminar">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="p-4 text-slate-600 font-semibold text-right">
+                          Bs. {producto.precioCompra.toFixed(2)}
+                        </td>
+                        <td className="p-4 text-slate-600 font-bold text-right bg-slate-50/50">
+                          Bs. {(producto.stock * producto.precioCompra).toFixed(2)}
+                        </td>
+                        <td className="p-4 text-kitty-pink font-bold text-right">
+                          Bs. {producto.precioVenta.toFixed(2)}
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex justify-center gap-2">
+                            <button onClick={() => handleEdit(producto)} className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100 transition-colors" title="Editar">
+                              <Edit size={16} />
+                            </button>
+                            <button onClick={() => handleDelete(producto._id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Eliminar">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Controles de Paginación */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button 
+            onClick={() => setPage(p => Math.max(1, p - 1))} 
+            disabled={page === 1}
+            className="p-2 rounded-full bg-white border border-pink-200 text-kitty-pink disabled:opacity-50 hover:bg-pink-50 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <span className="font-bold text-slate-600">
+            Página {page} de {totalPages}
+          </span>
+          <button 
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+            disabled={page === totalPages}
+            className="p-2 rounded-full bg-white border border-pink-200 text-kitty-pink disabled:opacity-50 hover:bg-pink-50 transition-colors"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
 
       {/* Modal de Edición */}
       {showModal && (

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Truck, Phone, Mail, MapPin, Search, Plus, X, List, ExternalLink, Calendar, Package, Edit2, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { CardSkeleton } from '../components/Skeleton.jsx';
 
 const ProveedoresPage = () => {
   const [proveedores, setProveedores] = useState([]);
@@ -48,17 +50,17 @@ const ProveedoresPage = () => {
     try {
       if (modalMode === 'crear') {
         await axios.post(`${import.meta.env.VITE_API_URL}/api/proveedores`, nuevoProveedor);
-        alert("Proveedor registrado con éxito. 🎀");
+        toast.success("Proveedor registrado con éxito. 🎀");
       } else {
         await axios.put(`${import.meta.env.VITE_API_URL}/api/proveedores/${editId}`, nuevoProveedor);
-        alert("Proveedor actualizado con éxito. 📝");
+        toast.success("Proveedor actualizado con éxito. 📝");
       }
       fetchData();
       setIsModalOpen(false);
       setNuevoProveedor({ nombreEmpresa: '', contacto: '', email: '', telefono: '', direccion: '', categoriaSuministro: '' });
     } catch (error) {
       console.error(error);
-      alert("Error al guardar proveedor.");
+      toast.error("Error al guardar proveedor.");
     }
   };
 
@@ -67,10 +69,10 @@ const ProveedoresPage = () => {
       try {
         await axios.delete(`${import.meta.env.VITE_API_URL}/api/proveedores/${id}`);
         fetchData();
-        alert("Proveedor eliminado. 🗑️");
+        toast.success("Proveedor eliminado. 🗑️");
       } catch (error) {
         console.error(error);
-        alert("Error al eliminar el proveedor.");
+        toast.error("Error al eliminar el proveedor.");
       }
     }
   };
@@ -107,7 +109,7 @@ const ProveedoresPage = () => {
     (p.contacto || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading && proveedores.length === 0) return <div className="p-8 text-center text-kitty-pink font-bold">Cargando directorio de proveedores... 🚚💨</div>;
+  // if (loading && proveedores.length === 0) return ...;
 
   return (
     <div className="flex-1 flex flex-col p-6 bg-slate-50">
@@ -135,7 +137,9 @@ const ProveedoresPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {proveedoresFiltrados.map(p => {
+        {loading ? (
+          Array(6).fill(0).map((_, i) => <CardSkeleton key={i} />)
+        ) : proveedoresFiltrados.map(p => {
           const susCompras = compras.filter(c => (c.proveedor === p._id) || (c.proveedor?._id === p._id));
           const totalInvertido = susCompras.reduce((acc, curr) => acc + curr.total, 0);
 

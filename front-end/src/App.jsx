@@ -4,6 +4,7 @@ import { ShoppingBag, FileText, Truck, Package, Banknote, Home, Box, ClipboardLi
 import Logo from './images/Logo.png';
 import FondoMenu from './images/Fondo de mi menu.png';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { Toaster } from 'react-hot-toast';
 
 // Lazy loading — cada página se carga solo cuando se necesita
 const DashboardPage  = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -131,6 +132,13 @@ function AppRoutes() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster 
+          position="bottom-right" 
+          toastOptions={{ 
+            style: { background: '#fdf2f8', color: '#db2777', fontWeight: 'bold', border: '1px solid #fbcfe8' },
+            success: { iconTheme: { primary: '#db2777', secondary: '#fdf2f8' } }
+          }} 
+        />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Ruta pública */}
