@@ -6,6 +6,7 @@ const ventaSchema = new mongoose.Schema({
     producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto', required: true },
     cantidad: { type: Number, required: true },
     precioUnitario: { type: Number, required: true },
+    costoHistorico: { type: Number, required: true, default: 0 },
     subtotal: { type: Number, required: true }
   }],
   total: { type: Number, required: true },

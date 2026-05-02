@@ -111,11 +111,71 @@ const ReportesPage = () => {
         >
           <ShoppingCart size={18} /> Historial de Compras
         </button>
+        <button 
+          onClick={() => setActiveTab('rentabilidad')}
+          className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'rentabilidad' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <TrendingUp size={18} /> Detalle de Rentabilidad por Venta
+        </button>
       </div>
 
       {/* Tabla Dinámica */}
       <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
-        {activeTab === 'ventas' ? (
+        {activeTab === 'rentabilidad' ? (
+          <div className="overflow-x-auto">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <FileText className="text-indigo-300" /> Detalle de Rentabilidad por Venta
+              </h2>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest border border-slate-200 px-3 py-1 rounded-full">
+                Basado en Costos Históricos
+              </span>
+            </div>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white text-slate-500 text-xs font-black">
+                  <th className="p-5 border-b border-slate-100">Fecha</th>
+                  <th className="p-5 border-b border-slate-100">Nº Venta</th>
+                  <th className="p-5 border-b border-slate-100">Producto</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Cant.</th>
+                  <th className="p-5 border-b border-slate-100">P. Venta</th>
+                  <th className="p-5 border-b border-slate-100">C. Compra (Histórico)</th>
+                  <th className="p-5 border-b border-slate-100">Utilidad Unit.</th>
+                  <th className="p-5 border-b border-slate-100 text-right">Utilidad Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ventas.filter(v => v.estado !== 'Anulada').flatMap(v => 
+                  v.productos.map(item => {
+                    const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
+                    const pVenta = item.precioUnitario || 0;
+                    const utilidadUnit = pVenta - cCompraHistorico;
+                    const utilidadTotal = utilidadUnit * item.cantidad;
+
+                    return (
+                      <tr key={`${v._id}-${item.producto?._id}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                        <td className="p-5 text-sm text-slate-600">{new Date(v.fecha).toLocaleDateString()}</td>
+                        <td className="p-5 text-sm text-slate-500 font-mono">#{v._id.slice(-5).toUpperCase()}</td>
+                        <td className="p-5 font-bold text-slate-800">
+                          {item.producto?.nombre || 'Producto Eliminado'} <span className="text-gray-400 text-xs font-normal">({item.producto?.codigo || 'S/N'})</span>
+                        </td>
+                        <td className="p-5 text-center text-slate-600 font-medium">{item.cantidad}</td>
+                        <td className="p-5 text-indigo-500 font-bold">Bs. {pVenta.toFixed(2)}</td>
+                        <td className="p-5 text-slate-500">Bs. {cCompraHistorico.toFixed(2)}</td>
+                        <td className={`p-5 font-bold ${utilidadUnit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          Bs. {utilidadUnit.toFixed(2)}
+                        </td>
+                        <td className={`p-5 font-black text-right ${utilidadTotal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          Bs. {utilidadTotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === 'ventas' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>

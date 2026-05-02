@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Box, Plus, Minus, Trash2, Banknote, QrCode, Search, Truck, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { CardSkeleton } from '../components/Skeleton.jsx';
 
 const ComprasPage = () => {
   const [productos, setProductos] = useState([]);
@@ -76,6 +78,7 @@ const ComprasPage = () => {
         producto,
         cantidad: 1,
         costoUnitario: producto.precioCompra, // Por defecto el costo registrado
+        precioVentaNuevo: producto.precioVenta, // Por defecto el PVP registrado
         subtotal: producto.precioCompra
       }]);
     }
@@ -102,6 +105,16 @@ const ComprasPage = () => {
     }));
   };
 
+  const modificarPrecioVenta = (id, nuevoPrecio) => {
+    const precio = parseFloat(nuevoPrecio) || 0;
+    setCarrito(carrito.map(item => {
+      if (item.producto._id === id) {
+        return { ...item, precioVentaNuevo: precio };
+      }
+      return item;
+    }));
+  };
+
   const eliminarDelCarrito = (id) => {
     setCarrito(carrito.filter(item => item.producto._id !== id));
   };
@@ -110,8 +123,8 @@ const ComprasPage = () => {
 
   // Registro Final
   const confirmarCompra = async () => {
-    if (carrito.length === 0) return alert("La lista de ingreso está vacía");
-    if (!proveedorSeleccionado) return alert("Debes seleccionar un proveedor");
+    if (carrito.length === 0) return toast.error("La lista de ingreso está vacía");
+    if (!proveedorSeleccionado) return toast.error("Debes seleccionar un proveedor");
     
     if (!window.confirm(`¿Estás seguro de registrar esta compra por un total de Bs. ${totalCarrito.toFixed(2)}?`)) {
       return;
@@ -123,6 +136,7 @@ const ComprasPage = () => {
         producto: item.producto._id,
         cantidad: item.cantidad,
         costoUnitario: item.costoUnitario,
+        precioVentaNuevo: item.precioVentaNuevo,
         subtotal: item.subtotal
       })),
       total: totalCarrito,
@@ -132,7 +146,7 @@ const ComprasPage = () => {
 
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/compras`, compraData);
-      alert("¡Compra registrada y stock actualizado con éxito! 📦");
+      toast.success("¡Compra registrada y catálogo actualizado con éxito! 📦");
       setCarrito([]);
       setProveedorSeleccionado('');
       setBusquedaProveedor('');
@@ -140,7 +154,7 @@ const ComprasPage = () => {
       fetchData(); // Recargar productos
     } catch (error) {
       console.error("Error al registrar compra:", error);
-      alert("Hubo un error al registrar la compra.");
+      toast.error("Hubo un error al registrar la compra.");
     }
   };
 
@@ -170,10 +184,10 @@ const ComprasPage = () => {
         setCategoriasExistentes([...categoriasExistentes, res.data.categoria]);
       }
       agregarAlCarrito(res.data);
-      alert("Producto creado y añadido a la lista. 🎀");
+      toast.success("Producto creado y añadido a la lista. 🎀");
     } catch (error) {
       console.error(error);
-      alert("Error al crear producto");
+      toast.error("Error al crear producto");
     }
   };
 
@@ -188,10 +202,10 @@ const ComprasPage = () => {
       setProveedorSeleccionado(res.data._id);
       setIsProveedorModalOpen(false);
       setNuevoProveedor({ nombreEmpresa: '', telefono: '', contacto: '' });
-      alert("Proveedor registrado rápidamente.");
+      toast.success("Proveedor registrado rápidamente.");
     } catch (error) {
       console.error(error);
-      alert("Error al registrar proveedor");
+      toast.error("Error al registrar proveedor");
     }
   };
 
@@ -200,7 +214,7 @@ const ComprasPage = () => {
     (p.marca && p.marca.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  if (loading) return <div className="p-8 text-center text-kitty-pink">Cargando sistema de compras... 🎀</div>;
+  // if (loading) return ...; // Skeleton manejado abajo
 
   return (
     <>
@@ -230,7 +244,9 @@ const ComprasPage = () => {
 
           <div className="flex-1 overflow-y-auto pr-2">
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {productosFiltrados.map(producto => (
+              {loading ? (
+                Array(8).fill(0).map((_, i) => <CardSkeleton key={i} />)
+              ) : productosFiltrados.map(producto => (
                 <div 
                   key={producto._id} 
                   onClick={() => agregarAlCarrito(producto)}
@@ -269,14 +285,24 @@ const ComprasPage = () => {
                   <div key={item.producto._id} className="flex gap-3 border-b border-pink-50 pb-4">
                     <div className="flex-1">
                       <p className="font-bold text-slate-800 text-sm leading-tight mb-2">{item.producto.nombre}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Costo Unit. (Bs)</span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest w-24">Costo Compra</span>
                         <input 
                           type="number" 
                           step="0.01"
                           value={item.costoUnitario}
                           onChange={(e) => modificarCostoUnidad(item.producto._id, e.target.value)}
                           className="w-20 border border-pink-200 rounded px-2 py-1 text-sm font-bold text-kitty-pink outline-none focus:border-kitty-pink"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest w-24">P. Venta Público</span>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={item.precioVentaNuevo}
+                          onChange={(e) => modificarPrecioVenta(item.producto._id, e.target.value)}
+                          className="w-20 border border-pink-200 rounded px-2 py-1 text-sm font-bold text-indigo-500 outline-none focus:border-indigo-400"
                         />
                       </div>
                     </div>

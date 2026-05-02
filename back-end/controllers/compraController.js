@@ -17,11 +17,18 @@ export const registrarCompra = async (req, res) => {
 
     const compraGuardada = await nuevaCompra.save();
 
-    // 2. Aumentar stock y registrar movimientos de Inventario
+    // 2. Aumentar stock y actualizar precios
     for (let item of productos) {
-      await Producto.findByIdAndUpdate(item.producto, {
-        $inc: { stock: item.cantidad }
-      });
+      const updateData = {
+        $inc: { stock: item.cantidad },
+        $set: { precioCompra: item.costoUnitario } // Actualizar al costo más reciente
+      };
+      
+      if (item.precioVentaNuevo !== undefined && item.precioVentaNuevo !== null) {
+        updateData.$set.precioVenta = item.precioVentaNuevo;
+      }
+
+      await Producto.findByIdAndUpdate(item.producto, updateData);
 
       // Registro en historial de inventario
       const movInventario = new Inventario({

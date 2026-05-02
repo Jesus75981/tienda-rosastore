@@ -7,7 +7,8 @@ export const registrarVenta = async (req, res) => {
   try {
     const { cliente, productos, total, metodoPago, cuentaDestino, logistica } = req.body;
 
-    // 1. Validar stock antes de vender
+    // 1. Validar stock antes de vender y obtener costos históricos
+    const productosConCosto = [];
     for (let item of productos) {
       const productoDb = await Producto.findById(item.producto);
       if (!productoDb) {
@@ -16,12 +17,18 @@ export const registrarVenta = async (req, res) => {
       if (productoDb.stock < item.cantidad) {
         return res.status(400).json({ message: `Stock insuficiente para ${productoDb.nombre}` });
       }
+      
+      // Agregamos el costoHistorico al item
+      productosConCosto.push({
+        ...item,
+        costoHistorico: productoDb.precioCompra || 0
+      });
     }
 
     // 2. Crear la venta
     const nuevaVenta = new Venta({
       cliente: cliente || null,
-      productos,
+      productos: productosConCosto,
       total,
       metodoPago,
       cuentaDestino
