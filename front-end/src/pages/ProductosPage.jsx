@@ -59,7 +59,7 @@ const ProductosPage = () => {
           <div key={producto._id} className="kitty-card flex flex-col transition-transform hover:-translate-y-1">
             <div className="bg-pink-50 h-40 flex items-center justify-center border-b border-pink-100 overflow-hidden relative">
               {producto.imagen ? (
-                <img src={`https://tienda-rosastore.onrender.com${producto.imagen}`} alt={producto.nombre} className="w-full h-full object-cover transition-transform hover:scale-105" />
+                <img src={producto.imagen?.startsWith('http') ? producto.imagen : `${import.meta.env.VITE_API_URL}${producto.imagen}`} alt={producto.nombre} className="w-full h-full object-cover transition-transform hover:scale-105" />
               ) : (
                 <Package size={48} className="text-pink-200" />
               )}

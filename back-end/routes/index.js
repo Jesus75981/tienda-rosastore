@@ -32,17 +32,25 @@ const models = {
 import { registrarVenta, anularVenta } from '../controllers/ventaController.js';
 import { registrarCompra, anularCompra } from '../controllers/compraController.js';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import path from 'path';
 
-// Configuración de Multer
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/') // Asegúrate de que esta carpeta exista
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname))
-  }
+// Configuración de Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'rosastore_productos',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
+
 const upload = multer({ storage: storage });
 
 // Rutas personalizadas
@@ -59,7 +67,7 @@ router.post('/productos', upload.single('imagen'), async (req, res) => {
   try {
     const data = { ...req.body };
     if (req.file) {
-      data.imagen = `/uploads/${req.file.filename}`;
+      data.imagen = req.file.path;
     }
 
     // Generar código automático
@@ -96,7 +104,7 @@ router.put('/productos/:id', upload.single('imagen'), async (req, res) => {
   try {
     const data = { ...req.body };
     if (req.file) {
-      data.imagen = `/uploads/${req.file.filename}`;
+      data.imagen = req.file.path;
     }
     
     const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, data, { new: true });
