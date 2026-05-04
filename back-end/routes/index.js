@@ -63,59 +63,69 @@ import { getResumenFinanciero } from '../controllers/finanzasController.js';
 router.get('/finanzas/resumen', getResumenFinanciero);
 
 // Sobrescribir POST de productos para aceptar imágenes
-router.post('/productos', upload.single('imagen'), async (req, res) => {
-  try {
-    const data = { ...req.body };
-    if (req.file) {
-      data.imagen = req.file.path;
+router.post('/productos', (req, res) => {
+  upload.single('imagen')(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: 'Error de imagen: ' + err.message });
     }
+    try {
+      const data = { ...req.body };
+      if (req.file) {
+        data.imagen = req.file.path;
+      }
 
-    // Generar código automático
-    const categoriaStr = (data.categoria || 'GEN').toUpperCase().trim().replace(/[^A-Z]/g, '');
-    const prefijo = categoriaStr.substring(0, 3).padEnd(3, 'X');
+      // Generar código automático
+      const categoriaStr = (data.categoria || 'GEN').toUpperCase().trim().replace(/[^A-Z]/g, '');
+      const prefijo = categoriaStr.substring(0, 3).padEnd(3, 'X');
 
-    // Buscar el último producto con ese prefijo
-    const ultimoProducto = await Producto.findOne({ codigo: new RegExp(`^${prefijo}-\\d{3}$`) })
-                                         .sort({ createdAt: -1 });
+      // Buscar el último producto con ese prefijo
+      const ultimoProducto = await Producto.findOne({ codigo: new RegExp(`^${prefijo}-\\d{3}$`) })
+                                           .sort({ createdAt: -1 });
 
-    let numero = 1;
-    if (ultimoProducto && ultimoProducto.codigo) {
-      const partes = ultimoProducto.codigo.split('-');
-      if (partes.length === 2) {
-        const lastNum = parseInt(partes[1], 10);
-        if (!isNaN(lastNum)) {
-          numero = lastNum + 1;
+      let numero = 1;
+      if (ultimoProducto && ultimoProducto.codigo) {
+        const partes = ultimoProducto.codigo.split('-');
+        if (partes.length === 2) {
+          const lastNum = parseInt(partes[1], 10);
+          if (!isNaN(lastNum)) {
+            numero = lastNum + 1;
+          }
         }
       }
+
+      data.codigo = `${prefijo}-${numero.toString().padStart(3, '0')}`;
+
+      const nuevoProducto = new Producto(data);
+      await nuevoProducto.save();
+      res.status(201).json(nuevoProducto);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
-
-    data.codigo = `${prefijo}-${numero.toString().padStart(3, '0')}`;
-
-    const nuevoProducto = new Producto(data);
-    await nuevoProducto.save();
-    res.status(201).json(nuevoProducto);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  });
 });
 
 // Sobrescribir PUT de productos para aceptar imágenes
-router.put('/productos/:id', upload.single('imagen'), async (req, res) => {
-  try {
-    const data = { ...req.body };
-    delete data._id; // Prevent updating immutable field _id
-    if (req.file) {
-      data.imagen = req.file.path;
+router.put('/productos/:id', (req, res) => {
+  upload.single('imagen')(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: 'Error de imagen: ' + err.message });
     }
-    
-    const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, data, { new: true });
-    if (!productoActualizado) {
-      return res.status(404).json({ message: 'Producto no encontrado' });
+    try {
+      const data = { ...req.body };
+      delete data._id; // Prevent updating immutable field _id
+      if (req.file) {
+        data.imagen = req.file.path;
+      }
+      
+      const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, data, { new: true });
+      if (!productoActualizado) {
+        return res.status(404).json({ message: 'Producto no encontrado' });
+      }
+      res.json(productoActualizado);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
-    res.json(productoActualizado);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  });
 });
 
 // Endpoint para obtener categorías únicas
