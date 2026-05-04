@@ -104,6 +104,23 @@ router.post('/productos', (req, res) => {
   });
 });
 
+// Helper para eliminar imagen antigua de Cloudinary
+const deleteCloudinaryImage = async (imageUrl) => {
+  try {
+    if (!imageUrl || !imageUrl.includes('cloudinary.com')) return;
+    const parts = imageUrl.split('/upload/');
+    if (parts.length === 2) {
+      const pathWithoutVersion = parts[1].replace(/^v\d+\//, '');
+      const publicId = pathWithoutVersion.substring(0, pathWithoutVersion.lastIndexOf('.'));
+      if (publicId) {
+        await cloudinary.uploader.destroy(publicId);
+      }
+    }
+  } catch (error) {
+    console.error('Error eliminando imagen antigua de Cloudinary:', error);
+  }
+};
+
 // Sobrescribir PUT de productos para aceptar imágenes
 router.put('/productos/:id', (req, res) => {
   upload.single('imagen')(req, res, async (err) => {
@@ -113,14 +130,22 @@ router.put('/productos/:id', (req, res) => {
     try {
       const data = { ...req.body };
       delete data._id; // Prevent updating immutable field _id
+      
+      // Buscar producto anterior para ver si necesitamos borrar su imagen
+      const productoAnterior = await Producto.findById(req.params.id);
+      if (!productoAnterior) {
+        return res.status(404).json({ message: 'Producto no encontrado' });
+      }
+
       if (req.file) {
         data.imagen = req.file.path;
+        // Borrar la imagen antigua si existía y es diferente
+        if (productoAnterior.imagen && productoAnterior.imagen !== data.imagen) {
+          await deleteCloudinaryImage(productoAnterior.imagen);
+        }
       }
       
       const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, data, { new: true });
-      if (!productoActualizado) {
-        return res.status(404).json({ message: 'Producto no encontrado' });
-      }
       res.json(productoActualizado);
     } catch (error) {
       res.status(400).json({ message: error.message });
