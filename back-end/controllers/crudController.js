@@ -65,7 +65,9 @@ export const createCrudController = (Model) => {
     },
     update: async (req, res) => {
       try {
-        const updatedDoc = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const data = { ...req.body };
+        delete data._id; // Prevent updating immutable field _id
+        const updatedDoc = await Model.findByIdAndUpdate(req.params.id, data, { new: true });
         if (!updatedDoc) return res.status(404).json({ message: 'No encontrado' });
         res.status(200).json(updatedDoc);
       } catch (error) {

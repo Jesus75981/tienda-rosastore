@@ -63,8 +63,9 @@ const InventarioPage = () => {
     e.preventDefault();
     try {
       const submitData = new FormData();
+      const keysToExclude = ['imagen', '_id', '__v', 'createdAt', 'updatedAt'];
       Object.keys(formData).forEach(key => {
-        if (key !== 'imagen' && formData[key] !== null) {
+        if (!keysToExclude.includes(key) && formData[key] !== null && formData[key] !== undefined) {
           submitData.append(key, formData[key]);
         }
       });

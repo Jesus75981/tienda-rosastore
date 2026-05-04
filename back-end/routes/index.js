@@ -103,6 +103,7 @@ router.post('/productos', upload.single('imagen'), async (req, res) => {
 router.put('/productos/:id', upload.single('imagen'), async (req, res) => {
   try {
     const data = { ...req.body };
+    delete data._id; // Prevent updating immutable field _id
     if (req.file) {
       data.imagen = req.file.path;
     }
