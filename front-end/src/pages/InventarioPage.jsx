@@ -80,7 +80,8 @@ const InventarioPage = () => {
       toast.success("Producto actualizado exitosamente 🎀");
     } catch (error) {
       console.error("Error al actualizar:", error);
-      toast.error("Error al actualizar el producto");
+      const errorMsg = error.response?.data?.message || "Error al actualizar el producto";
+      toast.error(errorMsg);
     }
   };
 
