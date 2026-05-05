@@ -159,6 +159,19 @@ const FinanzasPage = () => {
     }
   };
 
+  const handleEliminarTransaccion = async (id) => {
+    if (window.confirm('¿Estás seguro de que deseas anular/eliminar este movimiento? Los saldos se recalcularán automáticamente.')) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/finanzas/${id}`);
+        fetchData();
+        alert('Movimiento eliminado con éxito. 🎀');
+      } catch (error) {
+        console.error(error);
+        alert('Error al eliminar la transacción.');
+      }
+    }
+  };
+
   const abrirModalEditarCuenta = (cuenta) => {
     setCuentaModalMode('editar');
     setCuentaEditId(cuenta._id);
@@ -319,6 +332,7 @@ const FinanzasPage = () => {
                     <th className="p-4 border-b border-pink-50">Categoría</th>
                     <th className="p-4 border-b border-pink-50">Cuenta</th>
                     <th className="p-4 border-b border-pink-50 text-right">Monto</th>
+                    <th className="p-4 border-b border-pink-50 text-center">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,11 +355,16 @@ const FinanzasPage = () => {
                       <td className={`p-4 text-right font-black ${t.tipoTransaccion === 'Ingreso' ? 'text-emerald-500' : t.tipoTransaccion === 'Egreso' ? 'text-rose-500' : 'text-blue-500'}`}>
                         {t.tipoTransaccion === 'Egreso' ? '-' : t.tipoTransaccion === 'Ingreso' ? '+' : ''}Bs. {t.monto.toFixed(2)}
                       </td>
+                      <td className="p-4 text-center">
+                        <button onClick={() => handleEliminarTransaccion(t._id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-md transition-all shadow-sm" title="Eliminar Movimiento">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {transaccionesVisibles.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="p-8 text-center text-slate-400">No hay transacciones para mostrar.</td>
+                      <td colSpan="6" className="p-8 text-center text-slate-400">No hay transacciones para mostrar.</td>
                     </tr>
                   )}
                 </tbody>
