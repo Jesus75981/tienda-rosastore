@@ -66,7 +66,8 @@ router.get('/finanzas/resumen', getResumenFinanciero);
 router.post('/productos', (req, res) => {
   upload.single('imagen')(req, res, async (err) => {
     if (err) {
-      return res.status(400).json({ message: 'Error de imagen: ' + err.message });
+      const errorDetalle = err.message === 'undefined' ? 'Faltan credenciales de Cloudinary en el servidor (.env)' : err.message;
+      return res.status(400).json({ message: 'Error de imagen: ' + errorDetalle });
     }
     try {
       const data = { ...req.body };
@@ -125,7 +126,9 @@ const deleteCloudinaryImage = async (imageUrl) => {
 router.put('/productos/:id', (req, res) => {
   upload.single('imagen')(req, res, async (err) => {
     if (err) {
-      return res.status(400).json({ message: 'Error de imagen: ' + err.message });
+      // Si el error dice "undefined", casi siempre es por falta de API KEY de Cloudinary
+      const errorDetalle = err.message === 'undefined' ? 'Faltan credenciales de Cloudinary en el servidor (.env)' : err.message;
+      return res.status(400).json({ message: 'Error de imagen: ' + errorDetalle });
     }
     try {
       const data = { ...req.body };

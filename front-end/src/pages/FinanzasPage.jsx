@@ -88,17 +88,22 @@ const FinanzasPage = () => {
   const handleCrearTransaccion = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/finanzas`, {
+      const payload = {
         ...nuevaTransaccion,
         monto: parseFloat(nuevaTransaccion.monto)
-      });
+      };
+      if (payload.tipoTransaccion === 'Transferencia') {
+        payload.categoria = 'Transferencia Interna';
+      }
+
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/finanzas`, payload);
       setIsModalOpen(false);
       setNuevaTransaccion({ tipoTransaccion: 'Ingreso', monto: '', cuenta: 'Caja Tienda', cuentaOrigen: '', categoria: '', descripcion: '', metodoPago: 'Efectivo' });
       fetchData();
       alert('Transacción registrada con éxito. 🎀');
     } catch (error) {
       console.error(error);
-      alert('Error al registrar la transacción.');
+      alert('Error al registrar la transacción. ' + (error.response?.data?.message || error.message));
     }
   };
 
