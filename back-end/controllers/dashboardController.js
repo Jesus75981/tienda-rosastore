@@ -10,15 +10,22 @@ export const getDashboardStats = async (req, res) => {
 
     if (periodo && periodo !== 'general') {
       const startDate = new Date();
-      if (periodo === 'dia') {
-        startDate.setHours(0, 0, 0, 0);
-      } else if (periodo === 'semana') {
-        startDate.setDate(startDate.getDate() - 7);
-      } else if (periodo === 'mes') {
-        startDate.setMonth(startDate.getMonth() - 1);
-      } else if (periodo === 'año') {
-        startDate.setFullYear(startDate.getFullYear() - 1);
+      // Ajustar a 00:00 de Bolivia (UTC-4 => 04:00 UTC)
+      startDate.setUTCHours(4, 0, 0, 0);
+      
+      // Si aún no son las 4 AM UTC, hoy en Bolivia empezó ayer a las 4 AM UTC
+      if (new Date().getUTCHours() < 4) {
+        startDate.setUTCDate(startDate.getUTCDate() - 1);
       }
+
+      if (periodo === 'semana') {
+        startDate.setUTCDate(startDate.getUTCDate() - 7);
+      } else if (periodo === 'mes') {
+        startDate.setUTCMonth(startDate.getUTCMonth() - 1);
+      } else if (periodo === 'año') {
+        startDate.setUTCFullYear(startDate.getUTCFullYear() - 1);
+      }
+      
       filterFecha = { fecha: { $gte: startDate } };
       filterCreatedAt = { createdAt: { $gte: startDate } };
     }
@@ -43,24 +50,29 @@ export const getDashboardStats = async (req, res) => {
 
     // Datos para gráfico de ventas (últimos 7 días por defecto, pero adaptable si es mes o año)
     let fechaGrafico = new Date();
+    fechaGrafico.setUTCHours(4, 0, 0, 0);
+    if (new Date().getUTCHours() < 4) {
+      fechaGrafico.setUTCDate(fechaGrafico.getUTCDate() - 1);
+    }
+
     let dateFormat = "%Y-%m-%d";
 
     if (periodo === 'año') {
-      fechaGrafico.setFullYear(fechaGrafico.getFullYear() - 1);
+      fechaGrafico.setUTCFullYear(fechaGrafico.getUTCFullYear() - 1);
       dateFormat = "%Y-%m"; // Agrupar por mes si es un año
     } else if (periodo === 'mes') {
-      fechaGrafico.setMonth(fechaGrafico.getMonth() - 1);
+      fechaGrafico.setUTCMonth(fechaGrafico.getUTCMonth() - 1);
     } else if (periodo === 'dia') {
-      fechaGrafico.setHours(0, 0, 0, 0);
+      // Ya está en el inicio del día
     } else {
-      fechaGrafico.setDate(fechaGrafico.getDate() - 7);
+      fechaGrafico.setUTCDate(fechaGrafico.getUTCDate() - 7);
     }
     
     const ventasGrafico = await Venta.aggregate([
       { $match: { fecha: { $gte: fechaGrafico } } },
       {
         $group: {
-          _id: { $dateToString: { format: dateFormat, date: "$fecha" } },
+          _id: { $dateToString: { format: dateFormat, date: "$fecha", timezone: "-04:00" } },
           total: { $sum: "$total" }
         }
       },
