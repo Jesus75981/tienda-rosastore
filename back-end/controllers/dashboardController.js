@@ -16,6 +16,8 @@ export const getDashboardStats = async (req, res) => {
         startDate.setDate(startDate.getDate() - 7);
       } else if (periodo === 'mes') {
         startDate.setMonth(startDate.getMonth() - 1);
+      } else if (periodo === 'año') {
+        startDate.setFullYear(startDate.getFullYear() - 1);
       }
       filterFecha = { fecha: { $gte: startDate } };
       filterCreatedAt = { createdAt: { $gte: startDate } };
@@ -39,9 +41,14 @@ export const getDashboardStats = async (req, res) => {
       .limit(5)
       .populate('cliente', 'nombre apellidos');
 
-    // Datos para gráfico de ventas (últimos 7 días por defecto, pero adaptable si es mes)
+    // Datos para gráfico de ventas (últimos 7 días por defecto, pero adaptable si es mes o año)
     let fechaGrafico = new Date();
-    if (periodo === 'mes') {
+    let dateFormat = "%Y-%m-%d";
+
+    if (periodo === 'año') {
+      fechaGrafico.setFullYear(fechaGrafico.getFullYear() - 1);
+      dateFormat = "%Y-%m"; // Agrupar por mes si es un año
+    } else if (periodo === 'mes') {
       fechaGrafico.setMonth(fechaGrafico.getMonth() - 1);
     } else if (periodo === 'dia') {
       fechaGrafico.setHours(0, 0, 0, 0);
@@ -53,7 +60,7 @@ export const getDashboardStats = async (req, res) => {
       { $match: { fecha: { $gte: fechaGrafico } } },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
+          _id: { $dateToString: { format: dateFormat, date: "$fecha" } },
           total: { $sum: "$total" }
         }
       },

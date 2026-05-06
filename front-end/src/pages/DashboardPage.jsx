@@ -53,7 +53,8 @@ const DashboardPage = () => {
             { id: 'general', label: 'Todo' },
             { id: 'dia', label: 'Hoy' },
             { id: 'semana', label: '7 Días' },
-            { id: 'mes', label: 'Mes' }
+            { id: 'mes', label: 'Mes' },
+            { id: 'año', label: 'Año' }
           ].map((opt) => (
             <button
               key={opt.id}
@@ -102,7 +103,7 @@ const DashboardPage = () => {
         {/* Gráfico */}
         <div className="kitty-card p-6 lg:col-span-2">
           <h2 className="text-lg font-bold text-slate-800 mb-6">
-            Gráfico de Ventas {periodo === 'dia' ? '(Hoy)' : periodo === 'semana' ? '(Últimos 7 días)' : periodo === 'mes' ? '(Último mes)' : '(Últimos 7 días por defecto)'}
+            Gráfico de Ventas {periodo === 'dia' ? '(Hoy)' : periodo === 'semana' ? '(Últimos 7 días)' : periodo === 'mes' ? '(Último mes)' : periodo === 'año' ? '(Último año)' : '(Últimos 7 días por defecto)'}
           </h2>
           <div className="h-72">
             {stats.ventasGrafico.length > 0 ? (
@@ -124,7 +125,12 @@ const DashboardPage = () => {
                     tickFormatter={(dateStr) => {
                       if (!dateStr) return '';
                       const partes = dateStr.split('-');
-                      if (partes.length === 3) return `${partes[2]}/${partes[1]}`;
+                      if (partes.length === 3) return `${partes[2]}/${partes[1]}`; // DD/MM
+                      if (partes.length === 2) {
+                        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                        const mesIndex = parseInt(partes[1], 10) - 1;
+                        return `${meses[mesIndex] || partes[1]} ${partes[0].substring(2)}`; // Ene 26
+                      }
                       return dateStr;
                     }}
                   />
