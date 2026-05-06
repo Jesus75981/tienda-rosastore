@@ -10,11 +10,13 @@ const DashboardPage = () => {
     ventasGrafico: []
   });
   const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState('general');
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/stats`);
+        setLoading(true);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/stats?periodo=${periodo}`);
         setStats(response.data);
       } catch (error) {
         console.error("Error cargando dashboard:", error);
@@ -23,7 +25,7 @@ const DashboardPage = () => {
       }
     };
     fetchStats();
-  }, []);
+  }, [periodo]);
 
   const StatCard = ({ title, value, icon: Icon, colorClass }) => (
     <div className="kitty-card p-6 flex items-center justify-between transition-transform hover:-translate-y-1">
@@ -41,9 +43,31 @@ const DashboardPage = () => {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-kitty-pink mb-2">Bienvenida al Dashboard 🎀</h1>
-        <p className="text-gray-600">Resumen general de Tienda Rosestore</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-kitty-pink mb-2">Bienvenida al Dashboard 🎀</h1>
+          <p className="text-gray-600">Resumen general de Tienda Rosestore</p>
+        </div>
+        <div className="flex bg-pink-50 p-1 rounded-xl shadow-sm border border-pink-100">
+          {[
+            { id: 'general', label: 'Todo' },
+            { id: 'dia', label: 'Hoy' },
+            { id: 'semana', label: '7 Días' },
+            { id: 'mes', label: 'Mes' }
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setPeriodo(opt.id)}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${
+                periodo === opt.id 
+                  ? 'bg-kitty-pink text-white shadow-md transform scale-105' 
+                  : 'text-gray-500 hover:text-kitty-pink hover:bg-pink-100'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tarjetas de Resumen */}
@@ -77,16 +101,60 @@ const DashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Gráfico */}
         <div className="kitty-card p-6 lg:col-span-2">
-          <h2 className="text-lg font-bold text-slate-800 mb-6">Ventas de los últimos 7 días</h2>
+          <h2 className="text-lg font-bold text-slate-800 mb-6">
+            Gráfico de Ventas {periodo === 'dia' ? '(Hoy)' : periodo === 'semana' ? '(Últimos 7 días)' : periodo === 'mes' ? '(Último mes)' : '(Últimos 7 días por defecto)'}
+          </h2>
           <div className="h-72">
             {stats.ventasGrafico.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.ventasGrafico}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#fdf2f8" />
-                  <XAxis dataKey="_id" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `Bs. ${value}`} />
-                  <Tooltip cursor={{fill: '#fce7f3'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="total" fill="#FF69B4" radius={[4, 4, 0, 0]} />
+                <BarChart data={stats.ventasGrafico} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FF69B4" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#FF69B4" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#fce7f3" />
+                  <XAxis 
+                    dataKey="_id" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9ca3af', fontSize: 12 }} 
+                    dy={10}
+                    tickFormatter={(dateStr) => {
+                      if (!dateStr) return '';
+                      const partes = dateStr.split('-');
+                      if (partes.length === 3) return `${partes[2]}/${partes[1]}`;
+                      return dateStr;
+                    }}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    tickFormatter={(value) => `Bs.${value}`} 
+                  />
+                  <Tooltip 
+                    cursor={{fill: 'rgba(255, 105, 180, 0.05)'}} 
+                    contentStyle={{ 
+                      borderRadius: '16px', 
+                      border: 'none', 
+                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      padding: '12px 16px'
+                    }} 
+                    itemStyle={{ color: '#FF69B4', fontWeight: 'bold' }}
+                    formatter={(value) => [`Bs. ${value.toFixed(2)}`, 'Total']}
+                    labelStyle={{ color: '#6b7280', marginBottom: '4px' }}
+                  />
+                  <Bar 
+                    dataKey="total" 
+                    fill="url(#colorTotal)" 
+                    radius={[6, 6, 0, 0]} 
+                    barSize={40}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
