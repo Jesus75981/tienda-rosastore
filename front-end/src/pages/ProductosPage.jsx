@@ -11,7 +11,7 @@ const ProductosPage = () => {
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 12; // 12 cards per page fits nicely in grid
+  const limit = 18; // 18 cards per page (3 rows of 6)
 
   const fetchProductos = async () => {
     try {
@@ -69,7 +69,7 @@ const ProductosPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
         {loading ? (
           // Mostrar Skeletons
           Array(limit).fill(0).map((_, i) => <CardSkeleton key={i} />)
