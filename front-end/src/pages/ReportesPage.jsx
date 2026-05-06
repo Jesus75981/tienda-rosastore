@@ -258,6 +258,7 @@ const ReportesPage = () => {
                   <th className="p-5 border-b border-pink-50 text-right">Monto</th>
                   <th className="p-5 border-b border-pink-50">Método / Cuenta</th>
                   <th className="p-5 border-b border-pink-50 text-center">Estado</th>
+                  <th className="p-5 border-b border-pink-50 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,20 +280,20 @@ const ReportesPage = () => {
                       <p className="text-[10px] text-slate-400">{v.cuentaDestino}</p>
                     </td>
                     <td className="p-5 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
-                          {v.estado}
-                        </span>
-                        {v.estado !== 'Anulada' && (
-                          <button 
-                            onClick={() => handleAnularVenta(v._id)}
-                            className="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
-                            title="Anular Venta"
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-                        )}
-                      </div>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
+                        {v.estado}
+                      </span>
+                    </td>
+                    <td className="p-5 text-center">
+                      {v.estado !== 'Anulada' && (
+                        <button 
+                          onClick={() => handleAnularVenta(v._id)}
+                          className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                          title="Anular Venta"
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
