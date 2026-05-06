@@ -45,6 +45,19 @@ const ReportesPage = () => {
     }
   };
 
+  const handleAnularVenta = async (id) => {
+    if (window.confirm("¿Estás seguro de ANULAR esta venta? Se devolverá el stock al inventario y se registrará un egreso por devolución en finanzas.")) {
+      try {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/ventas/${id}/anular`);
+        alert("Venta anulada con éxito. Stock y Finanzas actualizados. 🔄");
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        alert("Error al anular venta.");
+      }
+    }
+  };
+
   const totalVendido = ventas.reduce((sum, v) => sum + (v.estado !== 'Anulada' ? v.total : 0), 0);
   const totalComprado = compras.reduce((sum, c) => sum + (c.estado !== 'Anulada' ? c.total : 0), 0);
 
@@ -266,9 +279,20 @@ const ReportesPage = () => {
                       <p className="text-[10px] text-slate-400">{v.cuentaDestino}</p>
                     </td>
                     <td className="p-5 text-center">
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
-                        {v.estado}
-                      </span>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
+                          {v.estado}
+                        </span>
+                        {v.estado !== 'Anulada' && (
+                          <button 
+                            onClick={() => handleAnularVenta(v._id)}
+                            className="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                            title="Anular Venta"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
