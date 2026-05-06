@@ -5,19 +5,22 @@ import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, Sho
 const ReportesPage = () => {
   const [ventas, setVentas] = useState([]);
   const [compras, setCompras] = useState([]);
+  const [historialInventario, setHistorialInventario] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras
+  const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras, rentabilidad, inventario
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resVentas, resCompras] = await Promise.all([
+      const [resVentas, resCompras, resInventario] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_URL}/api/ventas`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/compras`)
+        axios.get(`${import.meta.env.VITE_API_URL}/api/compras`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/inventario/historial`)
       ]);
       
       setVentas(resVentas.data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
       setCompras(resCompras.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      setHistorialInventario(resInventario.data);
     } catch (error) {
       console.error("Error al cargar reportes:", error);
     } finally {
@@ -117,11 +120,68 @@ const ReportesPage = () => {
         >
           <TrendingUp size={18} /> Detalle de Rentabilidad por Venta
         </button>
+        <button 
+          onClick={() => setActiveTab('inventario')}
+          className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'inventario' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <Package size={18} /> Movimientos de Stock
+        </button>
       </div>
 
       {/* Tabla Dinámica */}
       <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
-        {activeTab === 'rentabilidad' ? (
+        {activeTab === 'inventario' ? (
+          <div className="overflow-x-auto">
+            <div className="p-6 border-b border-orange-100 flex justify-between items-center bg-orange-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <Package className="text-orange-400" /> Historial de Movimientos de Stock
+              </h2>
+              <span className="text-xs font-bold text-orange-600 uppercase tracking-widest border border-orange-200 px-3 py-1 rounded-full bg-white">
+                Auditoría en Tiempo Real
+              </span>
+            </div>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <th className="p-5 border-b border-slate-100">Fecha y Hora</th>
+                  <th className="p-5 border-b border-slate-100">Producto</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Tipo</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Cant.</th>
+                  <th className="p-5 border-b border-slate-100">Motivo / Referencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialInventario.length === 0 ? (
+                  <tr><td colSpan="5" className="p-10 text-center text-slate-400 font-medium italic">No hay movimientos registrados aún.</td></tr>
+                ) : (
+                  historialInventario.map(mov => (
+                    <tr key={mov._id} className="hover:bg-orange-50/20 transition-colors border-b border-slate-50 last:border-0">
+                      <td className="p-5">
+                        <p className="text-sm font-bold text-slate-700">{new Date(mov.createdAt).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400">{new Date(mov.createdAt).toLocaleTimeString()}</p>
+                      </td>
+                      <td className="p-5">
+                        <p className="font-bold text-slate-800">{mov.producto?.nombre || 'Producto Eliminado'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{mov.producto?.codigo || '---'}</p>
+                      </td>
+                      <td className="p-5 text-center">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${mov.tipoMovimiento === 'Entrada' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                          {mov.tipoMovimiento}
+                        </span>
+                      </td>
+                      <td className={`p-5 text-center font-black text-lg ${mov.tipoMovimiento === 'Entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                        {mov.tipoMovimiento === 'Entrada' ? '+' : '-'}{mov.cantidad}
+                      </td>
+                      <td className="p-5">
+                        <p className="text-xs font-bold text-slate-600">{mov.motivo}</p>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === 'rentabilidad' ? (
           <div className="overflow-x-auto">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">

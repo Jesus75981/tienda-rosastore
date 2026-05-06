@@ -7,6 +7,22 @@ export const registrarCompra = async (req, res) => {
   try {
     const { proveedor, productos, total, cuentaOrigen, metodoPago } = req.body;
 
+    if (!productos || productos.length === 0) {
+      return res.status(400).json({ message: 'La compra debe tener al menos un producto' });
+    }
+    if (total < 0) {
+      return res.status(400).json({ message: 'El total de la compra no puede ser negativo' });
+    }
+
+    for (let item of productos) {
+      if (item.cantidad <= 0) {
+        return res.status(400).json({ message: 'La cantidad del producto debe ser mayor a 0' });
+      }
+      if (item.costoUnitario < 0) {
+        return res.status(400).json({ message: 'El costo unitario no puede ser negativo' });
+      }
+    }
+
     // 1. Crear la compra
     const nuevaCompra = new Compra({
       proveedor: proveedor || null,
@@ -72,6 +88,15 @@ export const anularCompra = async (req, res) => {
         producto.stock -= item.cantidad;
         if (producto.stock < 0) producto.stock = 0; // Evitar stock negativo si ya se vendió
         await producto.save();
+
+        // Registro en historial de inventario (Salida por anulación)
+        const movInventario = new Inventario({
+          producto: item.producto,
+          tipoMovimiento: 'Salida',
+          cantidad: item.cantidad,
+          motivo: `Anulación de Compra #${compra._id.toString().slice(-6).toUpperCase()}`
+        });
+        await movInventario.save();
       }
     }
 

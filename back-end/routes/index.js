@@ -183,6 +183,18 @@ router.get('/logistica/detalles', async (req, res) => {
   }
 });
 
+// Endpoint especial para historial de inventario (con populate)
+router.get('/inventario/historial', async (req, res) => {
+  try {
+    const historial = await Inventario.find()
+      .populate('producto', 'nombre codigo')
+      .sort({ createdAt: -1 });
+    res.json(historial);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Generar rutas CRUD automáticamente para cada modelo
 Object.keys(models).forEach(key => {
   const modelRouter = express.Router();

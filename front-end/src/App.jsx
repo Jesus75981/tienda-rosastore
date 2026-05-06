@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } f
 import { ShoppingBag, FileText, Truck, Package, Banknote, Home, Box, ClipboardList, BarChart2, LogOut, User } from 'lucide-react';
 import Logo from './images/Logo.png';
 import FondoMenu from './images/Fondo de mi menu.png';
+import FondoModulo from './images/Fondo para mis menus.png';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { Toaster } from 'react-hot-toast';
 
@@ -96,7 +97,11 @@ const Layout = ({ children }) => {
   return (
     <div className="flex flex-col h-screen bg-kitty-cream relative overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <img src={FondoMenu} alt="Fondo Rosestore" className="w-full h-full object-cover opacity-90" />
+        {isHome ? (
+          <img src={FondoMenu} alt="Fondo Rosestore" className="w-full h-full object-cover opacity-90" />
+        ) : (
+          <img src={FondoModulo} alt="Fondo Módulo" className="w-full h-full object-cover blur-[3px] opacity-40 scale-105" />
+        )}
       </div>
 
       {!isHome && (
