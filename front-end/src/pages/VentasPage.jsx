@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, QrCode, Search, User, Truck, MapPin } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Search, User, Truck, MapPin, Percent, Edit2, Check, X } from 'lucide-react';
 
 const VentasPage = () => {
   const [productos, setProductos] = useState([]);
@@ -23,6 +23,14 @@ const VentasPage = () => {
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [direccionEntrega, setDireccionEntrega] = useState('');
   const [puntoEntrega, setPuntoEntrega] = useState('');
+
+  // Estado Descuento
+  const [descuentoTipo, setDescuentoTipo] = useState('ninguno'); // 'ninguno' | 'porcentaje' | 'fijo'
+  const [descuentoValor, setDescuentoValor] = useState('');
+
+  // Estado edición de precio por mayor
+  const [editandoPrecio, setEditandoPrecio] = useState(null); // ID del producto editando
+  const [precioTemporal, setPrecioTemporal] = useState('');
 
   // Helpers de tipo de envío
   const esPuntoEntrega = tipoEnvio === 'Punto de Entrega';
@@ -104,10 +112,42 @@ const VentasPage = () => {
     setCarrito(carrito.filter(item => item.producto._id !== id));
   };
 
+  // --- Función editar precio por mayor ---
+  const iniciarEdicionPrecio = (item) => {
+    setEditandoPrecio(item.producto._id);
+    setPrecioTemporal(String(item.precioUnitario));
+  };
+
+  const confirmarEdicionPrecio = (id) => {
+    const nuevo = parseFloat(precioTemporal);
+    if (isNaN(nuevo) || nuevo < 0) {
+      alert('Precio inválido');
+      return;
+    }
+    setCarrito(carrito.map(item => {
+      if (item.producto._id === id) {
+        const esMayorista = nuevo !== item.producto.precioVenta;
+        return { ...item, precioUnitario: nuevo, subtotal: nuevo * item.cantidad, esMayorista };
+      }
+      return item;
+    }));
+    setEditandoPrecio(null);
+  };
+
+  const cancelarEdicionPrecio = () => setEditandoPrecio(null);
+
+  // --- Cálculos de totales ---
   const totalCarrito = carrito.reduce((sum, item) => sum + item.subtotal, 0);
-  // En Punto de Entrega no hay costo de envío
+
+  const montoDescuento = (() => {
+    const val = parseFloat(descuentoValor) || 0;
+    if (descuentoTipo === 'porcentaje') return Math.min((totalCarrito * val) / 100, totalCarrito);
+    if (descuentoTipo === 'fijo') return Math.min(val, totalCarrito);
+    return 0;
+  })();
+
   const costoEnvioEfectivo = esPuntoEntrega ? 0 : Number(costoEnvio);
-  const totalVenta = totalCarrito + costoEnvioEfectivo;
+  const totalVenta = Math.max(0, totalCarrito - montoDescuento + costoEnvioEfectivo);
 
   const confirmarVenta = async () => {
     if (carrito.length === 0) return alert("El carrito está vacío");
@@ -125,8 +165,15 @@ const VentasPage = () => {
         producto: item.producto._id,
         cantidad: item.cantidad,
         precioUnitario: item.precioUnitario,
-        subtotal: item.subtotal
+        subtotal: item.subtotal,
+        esPrecioMayorista: item.esMayorista || false
       })),
+      subtotalProductos: totalCarrito,
+      descuento: {
+        tipo: descuentoTipo,
+        valor: parseFloat(descuentoValor) || 0,
+        montoAplicado: montoDescuento
+      },
       total: totalVenta,
       metodoPago,
       cuentaDestino,
@@ -150,6 +197,9 @@ const VentasPage = () => {
       setCostoEnvio(0);
       setDireccionEntrega('');
       setPuntoEntrega('');
+      setDescuentoTipo('ninguno');
+      setDescuentoValor('');
+      setEditandoPrecio(null);
       
       // Recargar productos para actualizar stock
       const prodRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`);
@@ -243,25 +293,62 @@ const VentasPage = () => {
             ) : (
               <div className="space-y-4">
                 {carrito.map(item => (
-                  <div key={item.producto._id} className="flex gap-3 border-b border-pink-50 pb-4">
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-800 text-sm leading-tight">{item.producto.nombre}</p>
-                      <p className="text-kitty-pink font-bold text-sm mt-1">Bs. {item.precioUnitario}</p>
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      <button onClick={() => eliminarDelCarrito(item.producto._id)} className="text-red-400 hover:text-red-600 transition-colors mb-2">
-                        <Trash2 size={16} />
-                      </button>
-                      <div className="flex items-center gap-3 bg-pink-50 rounded-full px-2 py-1">
-                        <button onClick={() => modificarCantidad(item.producto._id, -1)} className="text-kitty-pink hover:text-kitty-rose">
-                          <Minus size={14} />
+                  <div key={item.producto._id} className="border-b border-pink-50 pb-4">
+                    <div className="flex gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-sm leading-tight truncate">{item.producto.nombre}</p>
+                        {/* Precio editable */}
+                        {editandoPrecio === item.producto._id ? (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-xs text-gray-400">Bs.</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.50"
+                              value={precioTemporal}
+                              onChange={e => setPrecioTemporal(e.target.value)}
+                              className="w-20 border border-kitty-pink rounded px-1 py-0.5 text-sm font-bold text-kitty-pink outline-none"
+                              autoFocus
+                            />
+                            <button onClick={() => confirmarEdicionPrecio(item.producto._id)} className="text-emerald-500 hover:text-emerald-700">
+                              <Check size={14} />
+                            </button>
+                            <button onClick={cancelarEdicionPrecio} className="text-red-400 hover:text-red-600">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-kitty-pink font-bold text-sm">Bs. {item.precioUnitario.toFixed(2)}</p>
+                            <button
+                              onClick={() => iniciarEdicionPrecio(item)}
+                              className="text-gray-300 hover:text-kitty-pink transition-colors"
+                              title="Editar precio (Mayor)"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            {item.esMayorista && (
+                              <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">💰 Mayor</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end justify-between shrink-0">
+                        <button onClick={() => eliminarDelCarrito(item.producto._id)} className="text-red-400 hover:text-red-600 transition-colors mb-2">
+                          <Trash2 size={16} />
                         </button>
-                        <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
-                        <button onClick={() => modificarCantidad(item.producto._id, 1)} className="text-kitty-pink hover:text-kitty-rose">
-                          <Plus size={14} />
-                        </button>
+                        <div className="flex items-center gap-2 bg-pink-50 rounded-full px-2 py-1">
+                          <button onClick={() => modificarCantidad(item.producto._id, -1)} className="text-kitty-pink hover:text-kitty-rose">
+                            <Minus size={14} />
+                          </button>
+                          <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
+                          <button onClick={() => modificarCantidad(item.producto._id, 1)} className="text-kitty-pink hover:text-kitty-rose">
+                            <Plus size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
+                    <p className="text-right text-xs text-gray-400 mt-1">Subtotal: <span className="font-bold text-slate-600">Bs. {item.subtotal.toFixed(2)}</span></p>
                   </div>
                 ))}
               </div>
@@ -389,6 +476,46 @@ const VentasPage = () => {
               </div>
             </div>
 
+            {/* ── Descuento ── */}
+            <div className="mb-4 bg-amber-50/60 p-4 rounded-xl border border-amber-100">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Percent size={14} className="text-amber-500" /> Descuento
+              </label>
+              <div className="flex gap-2 mb-2">
+                {[{v:'ninguno',label:'Sin desc.'},{v:'porcentaje',label:'% Porcentaje'},{v:'fijo',label:'Bs. Fijo'}].map(op => (
+                  <button
+                    key={op.v}
+                    onClick={() => { setDescuentoTipo(op.v); setDescuentoValor(''); }}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors ${
+                      descuentoTipo === op.v
+                        ? 'bg-amber-400 border-amber-400 text-white'
+                        : 'bg-white border-amber-200 text-gray-500 hover:bg-amber-50'
+                    }`}
+                  >
+                    {op.label}
+                  </button>
+                ))}
+              </div>
+              {descuentoTipo !== 'ninguno' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 font-medium">{descuentoTipo === 'porcentaje' ? '%' : 'Bs.'}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={descuentoTipo === 'porcentaje' ? 100 : undefined}
+                    step="0.5"
+                    value={descuentoValor}
+                    onChange={e => setDescuentoValor(e.target.value)}
+                    placeholder={descuentoTipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 5.00'}
+                    className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-sm font-bold text-amber-700 outline-none focus:border-amber-400"
+                  />
+                  {montoDescuento > 0 && (
+                    <span className="text-xs font-bold text-emerald-600 whitespace-nowrap">- Bs. {montoDescuento.toFixed(2)}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="mb-6">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Método de Pago</label>
               <div className="grid grid-cols-2 gap-2">
@@ -404,26 +531,34 @@ const VentasPage = () => {
               </div>
             </div>
 
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-slate-500 font-medium">Subtotal productos</span>
-                <span className="font-bold text-slate-700">Bs. {totalCarrito.toFixed(2)}</span>
+            <div className="mb-4 space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">Subtotal productos</span>
+                <span className="font-semibold text-slate-700">Bs. {totalCarrito.toFixed(2)}</span>
               </div>
-              {!esPuntoEntrega && Number(costoEnvio) > 0 && (
-                <div className="flex justify-between items-center mb-2 text-kitty-pink">
+              {montoDescuento > 0 && (
+                <div className="flex justify-between items-center text-emerald-600">
                   <span className="text-sm font-medium">
-                    {esEnvioNacional ? '🚚 + Encomienda' : '🏠 + Envío'}
+                    🏷️ Descuento {descuentoTipo === 'porcentaje' ? `(${descuentoValor}%)` : 'fijo'}
                   </span>
-                  <span className="font-bold">Bs. {Number(costoEnvio).toFixed(2)}</span>
+                  <span className="font-bold">- Bs. {montoDescuento.toFixed(2)}</span>
+                </div>
+              )}
+              {!esPuntoEntrega && Number(costoEnvio) > 0 && (
+                <div className="flex justify-between items-center text-kitty-pink">
+                  <span className="text-sm font-medium">
+                    {esEnvioNacional ? '🚚 Encomienda' : '🏠 Envío'}
+                  </span>
+                  <span className="font-bold">+ Bs. {Number(costoEnvio).toFixed(2)}</span>
                 </div>
               )}
               {esPuntoEntrega && (
-                <div className="flex justify-between items-center mb-2 text-emerald-600">
+                <div className="flex justify-between items-center text-emerald-600">
                   <span className="text-sm font-medium">📍 Sin costo de envío</span>
                   <span className="font-bold">Bs. 0.00</span>
                 </div>
               )}
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+              <div className="flex justify-between items-center pt-2 border-t-2 border-kitty-pink/20 mt-2">
                 <span className="text-lg text-slate-600 font-medium">Total a Cobrar</span>
                 <span className="text-3xl font-black text-kitty-dark">Bs. {totalVenta.toFixed(2)}</span>
               </div>

@@ -6,7 +6,7 @@ import Inventario from '../models/Inventario.js';
 
 export const registrarVenta = async (req, res) => {
   try {
-    const { cliente, productos, total, metodoPago, cuentaDestino, logistica } = req.body;
+    const { cliente, productos, total, metodoPago, cuentaDestino, logistica, descuento, subtotalProductos } = req.body;
 
     if (!productos || productos.length === 0) {
       return res.status(400).json({ message: 'La venta debe tener al menos un producto' });
@@ -39,10 +39,15 @@ export const registrarVenta = async (req, res) => {
       });
     }
 
+    // Calcular subtotal real de productos (suma de ítems sin descuento de envío)
+    const totalCarritoCalculado = productosConCosto.reduce((sum, item) => sum + item.subtotal, 0);
+
     // 2. Crear la venta
     const nuevaVenta = new Venta({
       cliente: cliente || null,
       productos: productosConCosto,
+      subtotalProductos: subtotalProductos || totalCarritoCalculado,
+      descuento: descuento || { tipo: 'ninguno', valor: 0, montoAplicado: 0 },
       total,
       metodoPago,
       cuentaDestino

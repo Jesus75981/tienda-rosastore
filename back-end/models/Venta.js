@@ -7,13 +7,20 @@ const ventaSchema = new mongoose.Schema({
     cantidad: { type: Number, required: true },
     precioUnitario: { type: Number, required: true },
     costoHistorico: { type: Number, required: true, default: 0 },
-    subtotal: { type: Number, required: true }
+    subtotal: { type: Number, required: true },
+    esPrecioMayorista: { type: Boolean, default: false }
   }],
+  subtotalProductos: { type: Number, default: 0 }, // Total antes del descuento
+  descuento: {
+    tipo: { type: String, enum: ['porcentaje', 'fijo', 'ninguno'], default: 'ninguno' },
+    valor: { type: Number, default: 0 },
+    montoAplicado: { type: Number, default: 0 }  // Bs. descontados reales
+  },
   total: { type: Number, required: true },
   metodoPago: { type: String, enum: ['Efectivo', 'Tarjeta', 'Transferencia', 'Otro'], default: 'Efectivo' },
   cuentaDestino: { type: String, required: true, default: 'Caja Tienda' },
   fecha: { type: Date, default: Date.now },
-  estado: { type: String, enum: ['Completada', 'Pendiente', 'Cancelada'], default: 'Completada' }
+  estado: { type: String, enum: ['Completada', 'Pendiente', 'Cancelada', 'Anulada'], default: 'Completada' }
 }, { timestamps: true });
 
 export default mongoose.model('Venta', ventaSchema);
