@@ -277,14 +277,19 @@ const VentasPage = () => {
           </div>
         </div>
 
-        {/* Lado Derecho: El Carrito y Checkout */}
+        {/* Panel Derecho: Carrito y Checkout integrados */}
         <div className="w-[480px] bg-white flex flex-col shadow-[-4px_0_24px_rgba(255,105,180,0.08)] z-10">
-          <div className="p-6 border-b border-pink-50 bg-kitty-light/20">
-            <h2 className="text-xl font-bold text-slate-800">Carrito Actual 🛒</h2>
+          <div className="p-6 border-b border-pink-50 bg-kitty-light/20 shrink-0">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              Carrito Actual 🛒
+              {carrito.length > 0 && <span className="ml-auto text-xs bg-kitty-pink text-white font-black rounded-full px-2 py-0.5">{carrito.length} items</span>}
+            </h2>
           </div>
 
-          {/* Lista del Carrito */}
-          <div className="flex-1 overflow-y-auto p-6">
+          {/* Contenedor principal scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Lista del Carrito */}
+            <div className="p-6">
             {carrito.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-400">
                 <ShoppingBag size={48} className="mb-4 opacity-20" />
@@ -357,10 +362,11 @@ const VentasPage = () => {
                 ))}
               </div>
             )}
-          </div>
+            </div>
 
-          {/* Totales y Checkout */}
-          <div className="p-6 bg-slate-50 border-t border-pink-100">
+            {/* Totales y Checkout (Integrados al scroll) */}
+            {carrito.length > 0 && (
+              <div className="p-6 bg-slate-50 border-t border-pink-100">
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -579,6 +585,8 @@ const VentasPage = () => {
             >
               <ShoppingBag /> Confirmar Venta
             </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
