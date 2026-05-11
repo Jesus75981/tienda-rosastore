@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight, Archive, FileDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { TableSkeleton } from '../components/Skeleton.jsx';
 
 const InventarioPage = () => {
@@ -157,7 +157,7 @@ const InventarioPage = () => {
         tableRows.push(rowData);
       });
 
-      doc.autoTable({
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 35,
