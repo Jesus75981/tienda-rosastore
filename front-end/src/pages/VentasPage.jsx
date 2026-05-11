@@ -278,7 +278,7 @@ const VentasPage = () => {
         </div>
 
         {/* Lado Derecho: El Carrito y Checkout */}
-        <div className="w-[400px] bg-white flex flex-col shadow-[-4px_0_24px_rgba(255,105,180,0.05)] z-10">
+        <div className="w-[480px] bg-white flex flex-col shadow-[-4px_0_24px_rgba(255,105,180,0.08)] z-10">
           <div className="p-6 border-b border-pink-50 bg-kitty-light/20">
             <h2 className="text-xl font-bold text-slate-800">Carrito Actual 🛒</h2>
           </div>
@@ -291,64 +291,68 @@ const VentasPage = () => {
                 <p>El carrito está vacío</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {carrito.map(item => (
-                  <div key={item.producto._id} className="border-b border-pink-50 pb-4">
-                    <div className="flex gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 text-sm leading-tight truncate">{item.producto.nombre}</p>
-                        {/* Precio editable */}
-                        {editandoPrecio === item.producto._id ? (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className="text-xs text-gray-400">Bs.</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.50"
-                              value={precioTemporal}
-                              onChange={e => setPrecioTemporal(e.target.value)}
-                              className="w-20 border border-kitty-pink rounded px-1 py-0.5 text-sm font-bold text-kitty-pink outline-none"
-                              autoFocus
-                            />
-                            <button onClick={() => confirmarEdicionPrecio(item.producto._id)} className="text-emerald-500 hover:text-emerald-700">
-                              <Check size={14} />
-                            </button>
-                            <button onClick={cancelarEdicionPrecio} className="text-red-400 hover:text-red-600">
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-kitty-pink font-bold text-sm">Bs. {item.precioUnitario.toFixed(2)}</p>
-                            <button
-                              onClick={() => iniciarEdicionPrecio(item)}
-                              className="text-gray-300 hover:text-kitty-pink transition-colors"
-                              title="Editar precio (Mayor)"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            {item.esMayorista && (
-                              <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">💰 Mayor</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end justify-between shrink-0">
-                        <button onClick={() => eliminarDelCarrito(item.producto._id)} className="text-red-400 hover:text-red-600 transition-colors mb-2">
-                          <Trash2 size={16} />
-                        </button>
-                        <div className="flex items-center gap-2 bg-pink-50 rounded-full px-2 py-1">
-                          <button onClick={() => modificarCantidad(item.producto._id, -1)} className="text-kitty-pink hover:text-kitty-rose">
-                            <Minus size={14} />
+                  <div key={item.producto._id} className="bg-pink-50/40 rounded-xl p-3 border border-pink-100">
+                    {/* Fila 1: Nombre + Eliminar */}
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-slate-800 text-sm leading-snug flex-1 pr-2">{item.producto.nombre}</p>
+                      <button onClick={() => eliminarDelCarrito(item.producto._id)} className="text-red-300 hover:text-red-500 transition-colors shrink-0">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+
+                    {/* Fila 2: Precio editable + etiqueta mayorista */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {editandoPrecio === item.producto._id ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400 font-medium">Bs.</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.50"
+                            value={precioTemporal}
+                            onChange={e => setPrecioTemporal(e.target.value)}
+                            className="w-24 border-2 border-kitty-pink rounded-lg px-2 py-1 text-sm font-bold text-kitty-pink outline-none"
+                            autoFocus
+                          />
+                          <button onClick={() => confirmarEdicionPrecio(item.producto._id)} className="text-emerald-500 hover:text-emerald-700 bg-emerald-50 rounded-full p-1">
+                            <Check size={13} />
                           </button>
-                          <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
-                          <button onClick={() => modificarCantidad(item.producto._id, 1)} className="text-kitty-pink hover:text-kitty-rose">
-                            <Plus size={14} />
+                          <button onClick={cancelarEdicionPrecio} className="text-red-400 hover:text-red-600 bg-red-50 rounded-full p-1">
+                            <X size={13} />
                           </button>
                         </div>
-                      </div>
+                      ) : (
+                        <>
+                          <p className="text-kitty-pink font-extrabold text-base">Bs. {item.precioUnitario.toFixed(2)}</p>
+                          <button
+                            onClick={() => iniciarEdicionPrecio(item)}
+                            className="text-gray-300 hover:text-kitty-pink transition-colors"
+                            title="Cambiar precio (Mayor)"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          {item.esMayorista && (
+                            <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">💰 Mayor</span>
+                          )}
+                        </>
+                      )}
                     </div>
-                    <p className="text-right text-xs text-gray-400 mt-1">Subtotal: <span className="font-bold text-slate-600">Bs. {item.subtotal.toFixed(2)}</span></p>
+
+                    {/* Fila 3: Controles cantidad + subtotal */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 bg-white rounded-full px-3 py-1.5 border border-pink-200 shadow-sm">
+                        <button onClick={() => modificarCantidad(item.producto._id, -1)} className="text-kitty-pink hover:text-kitty-rose font-bold">
+                          <Minus size={14} />
+                        </button>
+                        <span className="font-bold text-sm w-5 text-center text-slate-700">{item.cantidad}</span>
+                        <button onClick={() => modificarCantidad(item.producto._id, 1)} className="text-kitty-pink hover:text-kitty-rose font-bold">
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <p className="text-sm font-bold text-slate-600">= Bs. <span className="text-kitty-dark">{item.subtotal.toFixed(2)}</span></p>
+                    </div>
                   </div>
                 ))}
               </div>
