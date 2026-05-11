@@ -28,7 +28,7 @@ const ComprasPage = () => {
   // Estados Modal Producto Nuevo
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
   const [nuevoProducto, setNuevoProducto] = useState({
-    nombre: '', marca: '', categoria: '', precioCompra: '', precioVenta: '', stock: '0', stockMinimo: '5'
+    nombre: '', marca: '', categoria: '', precioCompra: '', precioVenta: '', stock: '0', stockMinimo: '1'
   });
   const [imagenFile, setImagenFile] = useState(null);
   const [categoriasExistentes, setCategoriasExistentes] = useState([]);
@@ -177,7 +177,7 @@ const ComprasPage = () => {
       setProductos([...productos, res.data]);
       setIsProductoModalOpen(false);
       // Limpiar y auto-agregar al carrito
-      setNuevoProducto({nombre: '', marca: '', categoria: '', precioCompra: '', precioVenta: '', stock: '0', stockMinimo: '5'});
+      setNuevoProducto({nombre: '', marca: '', categoria: '', precioCompra: '', precioVenta: '', stock: '0', stockMinimo: '1'});
       setImagenFile(null);
       // Actualizar la lista de categorías si es una nueva
       if (!categoriasExistentes.includes(res.data.categoria)) {

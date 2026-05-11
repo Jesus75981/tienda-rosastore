@@ -9,9 +9,10 @@ const productoSchema = new mongoose.Schema({
   precioCompra: { type: Number, required: true },
   precioVenta: { type: Number, required: true },
   stock: { type: Number, default: 0 },
-  stockMinimo: { type: Number, default: 5 },
+  stockMinimo: { type: Number, default: 1 },
   fechaCaducidad: { type: Date },
-  imagen: { type: String }
+  imagen: { type: String },
+  archivado: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model('Producto', productoSchema);

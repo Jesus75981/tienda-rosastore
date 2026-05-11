@@ -24,6 +24,15 @@ export const createCrudController = (Model) => {
           }
         }
 
+        // Lógica para excluir archivados por defecto
+        if (req.query.archivado === 'true') {
+          query.archivado = true;
+        } else if (req.query.archivado === 'all') {
+          // No filtrar
+        } else if (Model.schema.paths.archivado) {
+          query.archivado = { $ne: true }; // Maneja false y null/undefined
+        }
+
         if (limit > 0) {
           const skip = (page - 1) * limit;
           const [docs, total] = await Promise.all([

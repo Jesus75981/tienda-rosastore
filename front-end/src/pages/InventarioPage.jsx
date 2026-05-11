@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TableSkeleton } from '../components/Skeleton.jsx';
 
@@ -12,6 +12,7 @@ const InventarioPage = () => {
   const [formData, setFormData] = useState({});
   const [imagenFile, setImagenFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [mostrarArchivados, setMostrarArchivados] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -22,7 +23,7 @@ const InventarioPage = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`, {
-        params: { page, limit, search: searchTerm }
+        params: { page, limit, search: searchTerm, archivado: mostrarArchivados }
       });
       if (res.data.data) {
         setProductos(res.data.data);
@@ -36,6 +37,17 @@ const InventarioPage = () => {
       toast.error("Error al cargar el inventario");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleArchivarToggle = async (id, currentStatus) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/productos/${id}`, { archivado: !currentStatus });
+      fetchProductos();
+      toast.success(currentStatus ? "Producto restaurado exitosamente" : "Producto archivado exitosamente");
+    } catch (error) {
+      console.error("Error al archivar:", error);
+      toast.error("Error al actualizar estado del producto");
     }
   };
 
@@ -90,7 +102,7 @@ const InventarioPage = () => {
       fetchProductos();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, page]);
+  }, [searchTerm, page, mostrarArchivados]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -99,13 +111,28 @@ const InventarioPage = () => {
 
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-kitty-pink mb-2 flex items-center gap-2">
             <Package size={32} /> Inventario General
           </h1>
           <p className="text-gray-600">Revisión de stock, costos y precios de venta</p>
         </div>
+      </div>
+
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => { setMostrarArchivados(false); setPage(1); }} 
+          className={`px-6 py-2 rounded-xl font-bold transition-all ${!mostrarArchivados ? 'bg-kitty-pink text-white shadow-md' : 'bg-white text-gray-500 border border-pink-100 hover:bg-pink-50'}`}
+        >
+          Inventario Activo
+        </button>
+        <button 
+          onClick={() => { setMostrarArchivados(true); setPage(1); }} 
+          className={`px-6 py-2 rounded-xl font-bold transition-all ${mostrarArchivados ? 'bg-gray-500 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}
+        >
+          Archivo Muerto
+        </button>
       </div>
 
       <div className="kitty-card p-6 mb-8 flex items-center gap-4">
@@ -190,6 +217,20 @@ const InventarioPage = () => {
                             <button onClick={() => handleEdit(producto)} className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100 transition-colors" title="Editar">
                               <Edit size={16} />
                             </button>
+                            {mostrarArchivados ? (
+                              <button onClick={() => handleArchivarToggle(producto._id, true)} className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="Desarchivar / Restaurar">
+                                <Package size={16} />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleArchivarToggle(producto._id, false)} 
+                                disabled={producto.stock > 0}
+                                className={`p-2 rounded-lg transition-colors ${producto.stock === 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`} 
+                                title={producto.stock === 0 ? "Archivar Producto" : "El stock debe ser 0 para archivar"}
+                              >
+                                <Archive size={16} />
+                              </button>
+                            )}
                             <button onClick={() => handleDelete(producto._id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Eliminar">
                               <Trash2 size={16} />
                             </button>
