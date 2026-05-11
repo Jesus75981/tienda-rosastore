@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Search, User, Truck, MapPin, Percent, Edit2, Check, X } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Search, User, Truck, MapPin, Percent, Edit2, Check, X, Package } from 'lucide-react';
 
 const VentasPage = () => {
   const [productos, setProductos] = useState([]);
@@ -260,16 +260,25 @@ const VentasPage = () => {
                 <div 
                   key={producto._id} 
                   onClick={() => agregarAlCarrito(producto)}
-                  className="bg-white p-4 rounded-xl shadow-sm border border-pink-50 cursor-pointer hover:border-kitty-pink hover:shadow-md transition-all flex flex-col"
+                  className="bg-white rounded-xl shadow-sm border border-pink-50 cursor-pointer hover:border-kitty-pink hover:shadow-md transition-all flex flex-col overflow-hidden hover:-translate-y-1"
                 >
-                  <span className="text-xs font-bold text-kitty-rose bg-pink-50 px-2 py-1 rounded-full w-max mb-2 flex gap-1">
-                    {producto.codigo && <span className="text-pink-400">{producto.codigo} |</span>} {producto.categoria}
-                  </span>
-                  <h3 className="font-bold text-slate-800 text-sm mb-1 line-clamp-2">{producto.nombre}</h3>
-                  <p className="text-xs text-gray-400 mb-3">{producto.marca}</p>
-                  <div className="mt-auto flex justify-between items-end">
-                    <p className="font-bold text-kitty-pink">Bs. {producto.precioVenta}</p>
-                    <p className="text-xs text-gray-500 font-medium">Stock: {producto.stock}</p>
+                  <div className="bg-pink-50 h-36 flex items-center justify-center border-b border-pink-100 overflow-hidden relative shrink-0">
+                    {producto.imagen ? (
+                      <img src={producto.imagen?.startsWith('http') ? producto.imagen : `${import.meta.env.VITE_API_URL}${producto.imagen}`} alt={producto.nombre} className="w-full h-full object-cover transition-transform hover:scale-105" />
+                    ) : (
+                      <Package size={40} className="text-pink-200" />
+                    )}
+                  </div>
+                  <div className="p-4 flex flex-col flex-1">
+                    <span className="text-xs font-bold text-kitty-rose bg-pink-50 px-2 py-1 rounded-full w-max mb-2 flex gap-1">
+                      {producto.codigo && <span className="text-pink-400">{producto.codigo} |</span>} {producto.categoria}
+                    </span>
+                    <h3 className="font-bold text-slate-800 text-sm mb-1 line-clamp-2">{producto.nombre}</h3>
+                    <p className="text-xs text-gray-400 mb-3">{producto.marca}</p>
+                    <div className="mt-auto flex justify-between items-end">
+                      <p className="font-bold text-kitty-pink">Bs. {producto.precioVenta}</p>
+                      <p className="text-xs text-gray-500 font-medium">Stock: {producto.stock}</p>
+                    </div>
                   </div>
                 </div>
               ))}
