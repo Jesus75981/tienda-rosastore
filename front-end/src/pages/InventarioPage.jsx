@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
+import { Package, Search, AlertTriangle, Edit, Trash2, X, ChevronLeft, ChevronRight, Archive, FileDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { TableSkeleton } from '../components/Skeleton.jsx';
 
 const InventarioPage = () => {
@@ -13,6 +15,8 @@ const InventarioPage = () => {
   const [imagenFile, setImagenFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [mostrarArchivados, setMostrarArchivados] = useState(false);
+  const [stats, setStats] = useState({ activos: 0, muertos: 0, total: 0 });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -97,12 +101,79 @@ const InventarioPage = () => {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const [activosRes, muertosRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/productos`, { params: { limit: 1, archivado: false } }),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/productos`, { params: { limit: 1, archivado: true } })
+      ]);
+      const activos = activosRes.data.totalItems || 0;
+      const muertos = muertosRes.data.totalItems || 0;
+      setStats({ activos, muertos, total: activos + muertos });
+    } catch (e) {
+      console.error("Error stats", e);
+    }
+  };
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchProductos();
+      fetchStats();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, page, mostrarArchivados]);
+
+  const exportarPDF = async () => {
+    try {
+      setIsExporting(true);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/productos`, {
+        params: { limit: 0, archivado: 'all' }
+      });
+      const todosLosProductos = res.data;
+
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Inventario General - Rosastore", 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Total Productos: ${stats.total} | Activos: ${stats.activos} | Archivo Muerto: ${stats.muertos}`, 14, 30);
+      
+      const tableColumn = ["Código", "Producto", "Marca", "Categoría", "Stock", "P. Compra", "P. Venta", "Estado"];
+      const tableRows = [];
+
+      todosLosProductos.forEach(producto => {
+        const estado = producto.archivado ? "Muerto" : "Activo";
+        const rowData = [
+          producto.codigo || '-',
+          producto.nombre,
+          producto.marca || '-',
+          producto.categoria || 'General',
+          producto.stock.toString(),
+          `Bs. ${producto.precioCompra.toFixed(2)}`,
+          `Bs. ${producto.precioVenta.toFixed(2)}`,
+          estado
+        ];
+        tableRows.push(rowData);
+      });
+
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 35,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [255, 105, 180] }
+      });
+
+      doc.save("Inventario_Rosastore.pdf");
+      toast.success("PDF generado exitosamente");
+    } catch (error) {
+      console.error("Error al exportar PDF:", error);
+      toast.error("Error al generar el PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -111,12 +182,28 @@ const InventarioPage = () => {
 
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-kitty-pink mb-2 flex items-center gap-2">
             <Package size={32} /> Inventario General
           </h1>
           <p className="text-gray-600">Revisión de stock, costos y precios de venta</p>
+        </div>
+        
+        <div className="flex flex-col items-end gap-3">
+          <button 
+            onClick={exportarPDF}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <FileDown size={18} /> {isExporting ? "Generando PDF..." : "Exportar Inventario (PDF)"}
+          </button>
+          
+          <div className="flex gap-2 text-xs md:text-sm font-bold">
+            <span className="bg-pink-50 text-kitty-pink px-3 py-1.5 rounded-lg border border-pink-100 shadow-sm">Total: {stats.total}</span>
+            <span className="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg border border-green-100 shadow-sm">Activos: {stats.activos}</span>
+            <span className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">Muertos: {stats.muertos}</span>
+          </div>
         </div>
       </div>
 
