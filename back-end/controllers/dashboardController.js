@@ -30,10 +30,20 @@ export const getDashboardStats = async (req, res) => {
       filterCreatedAt = { createdAt: { $gte: startDate } };
     }
 
-    // Calcular total de ventas
-    const ventas = await Venta.find(filterFecha);
+    // Calcular total de ventas y utilidad real
+    const ventas = await Venta.find(filterFecha).populate('productos.producto');
     const totalVentas = ventas.reduce((sum, venta) => sum + venta.total, 0);
     const ventasCount = ventas.length;
+
+    const utilidadReal = ventas.reduce((sum, venta) => {
+      if (venta.estado === 'Anulada') return sum;
+      const utilidadVenta = venta.productos.reduce((acc, item) => {
+        const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
+        const pVenta = item.precioUnitario || 0;
+        return acc + ((pVenta - cCompraHistorico) * item.cantidad);
+      }, 0);
+      return sum + utilidadVenta;
+    }, 0);
 
     // Calcular productos con stock bajo
     const productosBajoStock = await Producto.find({ $expr: { $lte: ["$stock", "$stockMinimo"] } });
@@ -82,6 +92,7 @@ export const getDashboardStats = async (req, res) => {
     res.status(200).json({
       resumen: {
         totalVentas,
+        utilidadReal,
         ventasCount,
         bajoStockCount,
         clientesCount

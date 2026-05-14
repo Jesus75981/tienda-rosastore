@@ -8,6 +8,7 @@ const ReportesPage = () => {
   const [historialInventario, setHistorialInventario] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras, rentabilidad, inventario
+  const [filtroRentabilidad, setFiltroRentabilidad] = useState({ fechaInicio: '', fechaFin: '', productoBusqueda: '' });
 
   const fetchData = async () => {
     try {
@@ -61,8 +62,8 @@ const ReportesPage = () => {
   const totalVendido = ventas.reduce((sum, v) => sum + (v.estado !== 'Anulada' ? v.total : 0), 0);
   const totalComprado = compras.reduce((sum, c) => sum + (c.estado !== 'Anulada' ? c.total : 0), 0);
 
-  // Calcular Utilidad Estimada Real basada en el costo histórico de las ventas
-  const utilidadEstimada = ventas.reduce((sum, v) => {
+  // Calcular Utilidad Real basada en el costo histórico de las ventas
+  const utilidadReal = ventas.reduce((sum, v) => {
     if (v.estado === 'Anulada') return sum;
     const utilidadVenta = v.productos?.reduce((acc, item) => {
       const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
@@ -71,6 +72,39 @@ const ReportesPage = () => {
     }, 0) || 0;
     return sum + utilidadVenta;
   }, 0);
+
+  // Filtro para Rentabilidad
+  const ventasFiltradasRentabilidad = ventas.filter(v => {
+    if (v.estado === 'Anulada') return false;
+    if (filtroRentabilidad.fechaInicio && new Date(v.fecha) < new Date(filtroRentabilidad.fechaInicio + 'T00:00:00')) return false;
+    if (filtroRentabilidad.fechaFin && new Date(v.fecha) > new Date(filtroRentabilidad.fechaFin + 'T23:59:59')) return false;
+    return true;
+  });
+
+  const rowsRentabilidad = ventasFiltradasRentabilidad.flatMap(v => 
+    v.productos.map(item => {
+      const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
+      const pVenta = item.precioUnitario || 0;
+      const utilidadUnit = pVenta - cCompraHistorico;
+      const utilidadTotal = utilidadUnit * item.cantidad;
+      return {
+        v,
+        item,
+        cCompraHistorico,
+        pVenta,
+        utilidadUnit,
+        utilidadTotal
+      };
+    })
+  ).filter(row => {
+    if (filtroRentabilidad.productoBusqueda) {
+      const nombre = row.item.producto?.nombre?.toLowerCase() || '';
+      return nombre.includes(filtroRentabilidad.productoBusqueda.toLowerCase());
+    }
+    return true;
+  });
+
+  const utilidadTotalFiltrada = rowsRentabilidad.reduce((sum, row) => sum + row.utilidadTotal, 0);
 
   // Procesar Reporte de Clientes
   const reporteClientes = ventas.reduce((acc, v) => {
@@ -126,10 +160,10 @@ const ReportesPage = () => {
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-black text-kitty-pink uppercase tracking-widest">Utilidad Estimada</span>
+            <span className="text-[10px] font-black text-kitty-pink uppercase tracking-widest">Utilidad Real</span>
             <div className="p-2 bg-pink-50 text-kitty-pink rounded-xl"><TrendingUp size={20} /></div>
           </div>
-          <p className="text-2xl font-black text-slate-800">Bs. {utilidadEstimada.toFixed(2)}</p>
+          <p className="text-2xl font-black text-slate-800">Bs. {utilidadReal.toFixed(2)}</p>
           <p className="text-xs text-slate-400 mt-1">Basado en ventas realizadas</p>
         </div>
 
@@ -332,13 +366,58 @@ const ReportesPage = () => {
           </div>
         ) : activeTab === 'rentabilidad' ? (
           <div className="overflow-x-auto">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                <FileText className="text-indigo-300" /> Detalle de Rentabilidad por Venta
-              </h2>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest border border-slate-200 px-3 py-1 rounded-full">
-                Basado en Costos Históricos
-              </span>
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                  <FileText className="text-indigo-300" /> Detalle de Rentabilidad por Venta
+                </h2>
+                <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-indigo-100 flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Utilidad Filtrada:</span>
+                  <span className={`text-lg font-black ${utilidadTotalFiltrada >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    Bs. {utilidadTotalFiltrada.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-slate-100">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Producto</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Rosa Roja..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300"
+                    value={filtroRentabilidad.productoBusqueda}
+                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, productoBusqueda: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                  <input 
+                    type="date" 
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300 text-slate-600"
+                    value={filtroRentabilidad.fechaInicio}
+                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, fechaInicio: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
+                  <input 
+                    type="date" 
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300 text-slate-600"
+                    value={filtroRentabilidad.fechaFin}
+                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, fechaFin: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <button 
+                    onClick={() => setFiltroRentabilidad({ fechaInicio: '', fechaFin: '', productoBusqueda: '' })}
+                    className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </div>
             </div>
             <table className="w-full text-left">
               <thead>
@@ -354,32 +433,27 @@ const ReportesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {ventas.filter(v => v.estado !== 'Anulada').flatMap(v => 
-                  v.productos.map(item => {
-                    const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
-                    const pVenta = item.precioUnitario || 0;
-                    const utilidadUnit = pVenta - cCompraHistorico;
-                    const utilidadTotal = utilidadUnit * item.cantidad;
-
-                    return (
-                      <tr key={`${v._id}-${item.producto?._id}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-                        <td className="p-5 text-sm text-slate-600">{new Date(v.fecha).toLocaleDateString()}</td>
-                        <td className="p-5 text-sm text-slate-500 font-mono">#{v._id.slice(-5).toUpperCase()}</td>
-                        <td className="p-5 font-bold text-slate-800">
-                          {item.producto?.nombre || 'Producto Eliminado'} <span className="text-gray-400 text-xs font-normal">({item.producto?.codigo || 'S/N'})</span>
-                        </td>
-                        <td className="p-5 text-center text-slate-600 font-medium">{item.cantidad}</td>
-                        <td className="p-5 text-indigo-500 font-bold">Bs. {pVenta.toFixed(2)}</td>
-                        <td className="p-5 text-slate-500">Bs. {cCompraHistorico.toFixed(2)}</td>
-                        <td className={`p-5 font-bold ${utilidadUnit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          Bs. {utilidadUnit.toFixed(2)}
-                        </td>
-                        <td className={`p-5 font-black text-right ${utilidadTotal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          Bs. {utilidadTotal.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })
+                {rowsRentabilidad.length === 0 ? (
+                  <tr><td colSpan="8" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron resultados con los filtros actuales.</td></tr>
+                ) : (
+                  rowsRentabilidad.map((row, idx) => (
+                    <tr key={`${row.v._id}-${row.item.producto?._id || idx}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                      <td className="p-5 text-sm text-slate-600">{new Date(row.v.fecha).toLocaleDateString()}</td>
+                      <td className="p-5 text-sm text-slate-500 font-mono">#{row.v._id.slice(-5).toUpperCase()}</td>
+                      <td className="p-5 font-bold text-slate-800">
+                        {row.item.producto?.nombre || 'Producto Eliminado'} <span className="text-gray-400 text-xs font-normal">({row.item.producto?.codigo || 'S/N'})</span>
+                      </td>
+                      <td className="p-5 text-center text-slate-600 font-medium">{row.item.cantidad}</td>
+                      <td className="p-5 text-indigo-500 font-bold">Bs. {row.pVenta.toFixed(2)}</td>
+                      <td className="p-5 text-slate-500">Bs. {row.cCompraHistorico.toFixed(2)}</td>
+                      <td className={`p-5 font-bold ${row.utilidadUnit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        Bs. {row.utilidadUnit.toFixed(2)}
+                      </td>
+                      <td className={`p-5 font-black text-right ${row.utilidadTotal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        Bs. {row.utilidadTotal.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

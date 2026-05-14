@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Banknote, ShoppingBag, AlertTriangle, Users } from 'lucide-react';
+import { Banknote, ShoppingBag, AlertTriangle, Users, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const DashboardPage = () => {
@@ -72,12 +72,18 @@ const DashboardPage = () => {
       </div>
 
       {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
         <StatCard 
           title="Ingresos Totales" 
           value={`Bs. ${stats.resumen.totalVentas.toFixed(2)}`} 
           icon={Banknote} 
           colorClass="bg-pink-100 text-kitty-pink" 
+        />
+        <StatCard 
+          title="Utilidad Real" 
+          value={`Bs. ${(stats.resumen.utilidadReal || 0).toFixed(2)}`} 
+          icon={TrendingUp} 
+          colorClass="bg-green-100 text-green-500" 
         />
         <StatCard 
           title="Ventas Realizadas" 
