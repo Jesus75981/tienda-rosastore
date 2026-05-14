@@ -1,14 +1,24 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw, Users, List } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw, Users, List, FilterX } from 'lucide-react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { es } from 'date-fns/locale/es';
+import 'react-datepicker/dist/react-datepicker.css';
+
+registerLocale('es', es);
 
 const ReportesPage = () => {
   const [ventas, setVentas] = useState([]);
   const [compras, setCompras] = useState([]);
   const [historialInventario, setHistorialInventario] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras, rentabilidad, inventario
-  const [filtroRentabilidad, setFiltroRentabilidad] = useState({ fechaInicio: '', fechaFin: '', productoBusqueda: '' });
+  const [activeTab, setActiveTab] = useState('ventas'); // ventas, compras, detalle_compras, rentabilidad, inventario, clientes
+
+  // Estados de Filtros
+  const [filtroRentabilidad, setFiltroRentabilidad] = useState({ fechaInicio: null, fechaFin: null, productoBusqueda: '' });
+  const [filtroVentas, setFiltroVentas] = useState({ fechaInicio: null, fechaFin: null, metodoPago: '', estado: '', clienteBusqueda: '' });
+  const [filtroCompras, setFiltroCompras] = useState({ fechaInicio: null, fechaFin: null, estado: '', proveedorBusqueda: '', productoBusqueda: '' });
+  const [filtroInventario, setFiltroInventario] = useState({ fechaInicio: null, fechaFin: null, tipo: '', productoBusqueda: '' });
 
   const fetchData = async () => {
     try {
@@ -73,12 +83,22 @@ const ReportesPage = () => {
     return sum + utilidadVenta;
   }, 0);
 
-  // Filtro para Rentabilidad
+  // Helper para verificar fechas
+  const isDateInRange = (dateStr, start, end) => {
+    const d = new Date(dateStr);
+    if (start && d < start) return false;
+    if (end) {
+      const endOfDay = new Date(end);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (d > endOfDay) return false;
+    }
+    return true;
+  };
+
+  // --- Filtros Rentabilidad ---
   const ventasFiltradasRentabilidad = ventas.filter(v => {
     if (v.estado === 'Anulada') return false;
-    if (filtroRentabilidad.fechaInicio && new Date(v.fecha) < new Date(filtroRentabilidad.fechaInicio + 'T00:00:00')) return false;
-    if (filtroRentabilidad.fechaFin && new Date(v.fecha) > new Date(filtroRentabilidad.fechaFin + 'T23:59:59')) return false;
-    return true;
+    return isDateInRange(v.fecha, filtroRentabilidad.fechaInicio, filtroRentabilidad.fechaFin);
   });
 
   const rowsRentabilidad = ventasFiltradasRentabilidad.flatMap(v => 
@@ -87,14 +107,7 @@ const ReportesPage = () => {
       const pVenta = item.precioUnitario || 0;
       const utilidadUnit = pVenta - cCompraHistorico;
       const utilidadTotal = utilidadUnit * item.cantidad;
-      return {
-        v,
-        item,
-        cCompraHistorico,
-        pVenta,
-        utilidadUnit,
-        utilidadTotal
-      };
+      return { v, item, cCompraHistorico, pVenta, utilidadUnit, utilidadTotal };
     })
   ).filter(row => {
     if (filtroRentabilidad.productoBusqueda) {
@@ -106,7 +119,48 @@ const ReportesPage = () => {
 
   const utilidadTotalFiltrada = rowsRentabilidad.reduce((sum, row) => sum + row.utilidadTotal, 0);
 
-  // Procesar Reporte de Clientes
+  // --- Filtros Ventas ---
+  const ventasFiltradas = ventas.filter(v => {
+    if (filtroVentas.estado && v.estado !== filtroVentas.estado) return false;
+    if (filtroVentas.metodoPago && v.metodoPago !== filtroVentas.metodoPago) return false;
+    if (filtroVentas.clienteBusqueda) {
+      const nombre = v.cliente?.nombre?.toLowerCase() || 'venta rápida';
+      if (!nombre.includes(filtroVentas.clienteBusqueda.toLowerCase())) return false;
+    }
+    return isDateInRange(v.fecha, filtroVentas.fechaInicio, filtroVentas.fechaFin);
+  });
+
+  // --- Filtros Compras ---
+  const comprasFiltradas = compras.filter(c => {
+    if (filtroCompras.estado && c.estado !== filtroCompras.estado) return false;
+    if (filtroCompras.proveedorBusqueda) {
+      const prov = (c.proveedor?.nombreEmpresa || c.proveedor?.nombre || 'importación').toLowerCase();
+      if (!prov.includes(filtroCompras.proveedorBusqueda.toLowerCase())) return false;
+    }
+    return isDateInRange(c.createdAt, filtroCompras.fechaInicio, filtroCompras.fechaFin);
+  });
+
+  const comprasDetalleFiltradas = comprasFiltradas.flatMap(c => 
+    (c.productos || []).map(item => ({ c, item }))
+  ).filter(row => {
+    if (filtroCompras.productoBusqueda) {
+      const prod = (row.item.producto?.nombre || 'eliminado').toLowerCase();
+      return prod.includes(filtroCompras.productoBusqueda.toLowerCase());
+    }
+    return true;
+  });
+
+  // --- Filtros Inventario ---
+  const inventarioFiltrado = historialInventario.filter(mov => {
+    if (filtroInventario.tipo && mov.tipoMovimiento !== filtroInventario.tipo) return false;
+    if (filtroInventario.productoBusqueda) {
+      const prod = (mov.producto?.nombre || 'eliminado').toLowerCase();
+      if (!prod.includes(filtroInventario.productoBusqueda.toLowerCase())) return false;
+    }
+    return isDateInRange(mov.createdAt, filtroInventario.fechaInicio, filtroInventario.fechaFin);
+  });
+
+  // --- Procesar Reporte de Clientes ---
   const reporteClientes = ventas.reduce((acc, v) => {
     if (v.estado !== 'Anulada') {
       const clienteId = v.cliente?._id || 'rapida';
@@ -116,7 +170,6 @@ const ReportesPage = () => {
       }
       acc[clienteId].totalGastado += v.total;
       acc[clienteId].compras += 1;
-      // Actualizar última compra si la venta es más reciente
       if (new Date(v.fecha) > new Date(acc[clienteId].ultimaCompra)) {
         acc[clienteId].ultimaCompra = v.fecha;
       }
@@ -201,7 +254,7 @@ const ReportesPage = () => {
           onClick={() => setActiveTab('rentabilidad')}
           className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'rentabilidad' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
         >
-          <TrendingUp size={18} /> Detalle de Rentabilidad por Venta
+          <TrendingUp size={18} /> Rentabilidad por Venta
         </button>
         <button 
           onClick={() => setActiveTab('inventario')}
@@ -219,15 +272,14 @@ const ReportesPage = () => {
 
       {/* Tabla Dinámica */}
       <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
+        
+        {/* --- PESTAÑA: CLIENTES --- */}
         {activeTab === 'clientes' ? (
           <div className="overflow-x-auto">
             <div className="p-6 border-b border-teal-100 flex justify-between items-center bg-teal-50/30">
               <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
                 <Users className="text-teal-400" /> Reporte de Mejores Clientes
               </h2>
-              <span className="text-xs font-bold text-teal-600 uppercase tracking-widest border border-teal-200 px-3 py-1 rounded-full bg-white">
-                Fidelización y Ventas
-              </span>
             </div>
             <table className="w-full text-left">
               <thead>
@@ -252,12 +304,8 @@ const ReportesPage = () => {
                           <p className="font-bold text-slate-800">{c.nombre}</p>
                         </div>
                       </td>
-                      <td className="p-5 text-center">
-                        <span className="font-black text-slate-600">{c.compras}</span>
-                      </td>
-                      <td className="p-5 text-right font-black text-teal-600">
-                        Bs. {c.totalGastado.toFixed(2)}
-                      </td>
+                      <td className="p-5 text-center"><span className="font-black text-slate-600">{c.compras}</span></td>
+                      <td className="p-5 text-right font-black text-teal-600">Bs. {c.totalGastado.toFixed(2)}</td>
                       <td className="p-5">
                         <p className="text-sm font-bold text-slate-700">{new Date(c.ultimaCompra).toLocaleDateString()}</p>
                         <p className="text-[10px] text-slate-400">{new Date(c.ultimaCompra).toLocaleTimeString()}</p>
@@ -268,15 +316,49 @@ const ReportesPage = () => {
               </tbody>
             </table>
           </div>
+
+        // --- PESTAÑA: DETALLE COMPRAS ---
         ) : activeTab === 'detalle_compras' ? (
           <div className="overflow-x-auto">
-            <div className="p-6 border-b border-cyan-100 flex justify-between items-center bg-cyan-50/30">
-              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+            <div className="p-6 border-b border-cyan-100 bg-cyan-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-4">
                 <List className="text-cyan-400" /> Detalle de Productos Comprados
               </h2>
-              <span className="text-xs font-bold text-cyan-600 uppercase tracking-widest border border-cyan-200 px-3 py-1 rounded-full bg-white">
-                Análisis de Inversión
-              </span>
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-cyan-100 shadow-sm">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Producto</label>
+                  <input type="text" placeholder="Ej. Rosa Roja..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-cyan-400"
+                    value={filtroCompras.productoBusqueda} onChange={(e) => setFiltroCompras({...filtroCompras, productoBusqueda: e.target.value})}
+                  />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Proveedor</label>
+                  <input type="text" placeholder="Ej. Distribuidora Sur..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-cyan-400"
+                    value={filtroCompras.proveedorBusqueda} onChange={(e) => setFiltroCompras({...filtroCompras, proveedorBusqueda: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                  <DatePicker selected={filtroCompras.fechaInicio} onChange={(date) => setFiltroCompras({...filtroCompras, fechaInicio: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
+                  <DatePicker selected={filtroCompras.fechaFin} onChange={(date) => setFiltroCompras({...filtroCompras, fechaFin: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <button onClick={() => setFiltroCompras({ fechaInicio: null, fechaFin: null, estado: '', proveedorBusqueda: '', productoBusqueda: '' })}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex gap-2 items-center">
+                  <FilterX size={16}/> Limpiar
+                </button>
+              </div>
             </div>
             <table className="w-full text-left">
               <thead>
@@ -290,8 +372,12 @@ const ReportesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {compras.filter(c => c.estado !== 'Anulada').flatMap(c => 
-                  c.productos?.map((item, idx) => {
+                {comprasDetalleFiltradas.length === 0 ? (
+                  <tr><td colSpan="6" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron resultados.</td></tr>
+                ) : (
+                  comprasDetalleFiltradas.map((row, idx) => {
+                    const c = row.c;
+                    const item = row.item;
                     const costoUnit = item.costoUnitario || item.precioCompra || 0;
                     const inversionTotal = costoUnit * item.cantidad;
                     return (
@@ -303,9 +389,7 @@ const ReportesPage = () => {
                         </td>
                         <td className="p-5 text-center text-slate-600 font-medium">{item.cantidad}</td>
                         <td className="p-5 text-slate-500">Bs. {costoUnit.toFixed(2)}</td>
-                        <td className="p-5 font-black text-right text-cyan-600">
-                          Bs. {inversionTotal.toFixed(2)}
-                        </td>
+                        <td className="p-5 font-black text-right text-cyan-600">Bs. {inversionTotal.toFixed(2)}</td>
                       </tr>
                     );
                   })
@@ -313,15 +397,53 @@ const ReportesPage = () => {
               </tbody>
             </table>
           </div>
+
+        // --- PESTAÑA: INVENTARIO ---
         ) : activeTab === 'inventario' ? (
           <div className="overflow-x-auto">
-            <div className="p-6 border-b border-orange-100 flex justify-between items-center bg-orange-50/30">
-              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+            <div className="p-6 border-b border-orange-100 bg-orange-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-4">
                 <Package className="text-orange-400" /> Historial de Movimientos de Stock
               </h2>
-              <span className="text-xs font-bold text-orange-600 uppercase tracking-widest border border-orange-200 px-3 py-1 rounded-full bg-white">
-                Auditoría en Tiempo Real
-              </span>
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-orange-100 shadow-sm">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Producto</label>
+                  <input type="text" placeholder="Ej. Rosa Roja..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                    value={filtroInventario.productoBusqueda} onChange={(e) => setFiltroInventario({...filtroInventario, productoBusqueda: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Tipo de Movimiento</label>
+                  <select 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 text-slate-600 font-bold"
+                    value={filtroInventario.tipo} onChange={(e) => setFiltroInventario({...filtroInventario, tipo: e.target.value})}
+                  >
+                    <option value="">Todos los Tipos</option>
+                    <option value="Entrada">Entrada (+)</option>
+                    <option value="Salida">Salida (-)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                  <DatePicker selected={filtroInventario.fechaInicio} onChange={(date) => setFiltroInventario({...filtroInventario, fechaInicio: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
+                  <DatePicker selected={filtroInventario.fechaFin} onChange={(date) => setFiltroInventario({...filtroInventario, fechaFin: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                  />
+                </div>
+                <button onClick={() => setFiltroInventario({ fechaInicio: null, fechaFin: null, tipo: '', productoBusqueda: '' })}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex gap-2 items-center">
+                  <FilterX size={16}/> Limpiar
+                </button>
+              </div>
             </div>
             <table className="w-full text-left">
               <thead>
@@ -334,10 +456,10 @@ const ReportesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {historialInventario.length === 0 ? (
-                  <tr><td colSpan="5" className="p-10 text-center text-slate-400 font-medium italic">No hay movimientos registrados aún.</td></tr>
+                {inventarioFiltrado.length === 0 ? (
+                  <tr><td colSpan="5" className="p-10 text-center text-slate-400 font-medium italic">No hay movimientos con los filtros actuales.</td></tr>
                 ) : (
-                  historialInventario.map(mov => (
+                  inventarioFiltrado.map(mov => (
                     <tr key={mov._id} className="hover:bg-orange-50/20 transition-colors border-b border-slate-50 last:border-0">
                       <td className="p-5">
                         <p className="text-sm font-bold text-slate-700">{new Date(mov.createdAt).toLocaleDateString()}</p>
@@ -364,12 +486,14 @@ const ReportesPage = () => {
               </tbody>
             </table>
           </div>
+
+        // --- PESTAÑA: RENTABILIDAD ---
         ) : activeTab === 'rentabilidad' ? (
           <div className="overflow-x-auto">
             <div className="p-6 border-b border-slate-100 bg-slate-50/50">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <FileText className="text-indigo-300" /> Detalle de Rentabilidad por Venta
+                  <TrendingUp className="text-indigo-500" /> Detalle de Rentabilidad por Venta
                 </h2>
                 <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-indigo-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-400 uppercase">Utilidad Filtrada:</span>
@@ -380,43 +504,32 @@ const ReportesPage = () => {
               </div>
 
               {/* Filtros */}
-              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-slate-100">
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Producto</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Rosa Roja..." 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300"
-                    value={filtroRentabilidad.productoBusqueda}
-                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, productoBusqueda: e.target.value})}
+                  <input type="text" placeholder="Ej. Rosa Roja..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+                    value={filtroRentabilidad.productoBusqueda} onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, productoBusqueda: e.target.value})}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
-                  <input 
-                    type="date" 
-                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300 text-slate-600"
-                    value={filtroRentabilidad.fechaInicio}
-                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, fechaInicio: e.target.value})}
+                  <DatePicker selected={filtroRentabilidad.fechaInicio} onChange={(date) => setFiltroRentabilidad({...filtroRentabilidad, fechaInicio: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
-                  <input 
-                    type="date" 
-                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-300 text-slate-600"
-                    value={filtroRentabilidad.fechaFin}
-                    onChange={(e) => setFiltroRentabilidad({...filtroRentabilidad, fechaFin: e.target.value})}
+                  <DatePicker selected={filtroRentabilidad.fechaFin} onChange={(date) => setFiltroRentabilidad({...filtroRentabilidad, fechaFin: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                   />
                 </div>
-                <div>
-                  <button 
-                    onClick={() => setFiltroRentabilidad({ fechaInicio: '', fechaFin: '', productoBusqueda: '' })}
-                    className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                  >
-                    Limpiar
-                  </button>
-                </div>
+                <button onClick={() => setFiltroRentabilidad({ fechaInicio: null, fechaFin: null, productoBusqueda: '' })}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex gap-2 items-center">
+                  <FilterX size={16}/> Limpiar
+                </button>
               </div>
             </div>
             <table className="w-full text-left">
@@ -458,8 +571,67 @@ const ReportesPage = () => {
               </tbody>
             </table>
           </div>
+
+        // --- PESTAÑA: VENTAS ---
         ) : activeTab === 'ventas' ? (
           <div className="overflow-x-auto">
+            <div className="p-6 border-b border-pink-100 bg-pink-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-4">
+                <ShoppingBag className="text-kitty-pink" /> Historial de Ventas
+              </h2>
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-pink-100 shadow-sm">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Cliente</label>
+                  <input type="text" placeholder="Ej. Juan Perez..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-kitty-pink"
+                    value={filtroVentas.clienteBusqueda} onChange={(e) => setFiltroVentas({...filtroVentas, clienteBusqueda: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Método de Pago</label>
+                  <select 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-kitty-pink font-bold text-slate-600"
+                    value={filtroVentas.metodoPago} onChange={(e) => setFiltroVentas({...filtroVentas, metodoPago: e.target.value})}
+                  >
+                    <option value="">Todos</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Estado</label>
+                  <select 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-kitty-pink font-bold text-slate-600"
+                    value={filtroVentas.estado} onChange={(e) => setFiltroVentas({...filtroVentas, estado: e.target.value})}
+                  >
+                    <option value="">Todos</option>
+                    <option value="Completada">Completada</option>
+                    <option value="Anulada">Anulada</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                  <DatePicker selected={filtroVentas.fechaInicio} onChange={(date) => setFiltroVentas({...filtroVentas, fechaInicio: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-kitty-pink"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
+                  <DatePicker selected={filtroVentas.fechaFin} onChange={(date) => setFiltroVentas({...filtroVentas, fechaFin: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-kitty-pink"
+                  />
+                </div>
+                <button onClick={() => setFiltroVentas({ fechaInicio: null, fechaFin: null, metodoPago: '', estado: '', clienteBusqueda: '' })}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex gap-2 items-center">
+                  <FilterX size={16}/> Limpiar
+                </button>
+              </div>
+            </div>
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
@@ -472,46 +644,92 @@ const ReportesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {ventas.map(v => (
-                  <tr key={v._id} className="hover:bg-pink-50/30 transition-colors border-b border-slate-50 last:border-0">
-                    <td className="p-5">
-                      <p className="text-sm font-bold text-slate-700">{new Date(v.fecha).toLocaleDateString()}</p>
-                      <p className="text-[10px] text-slate-400">{new Date(v.fecha).toLocaleTimeString()}</p>
-                    </td>
-                    <td className="p-5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center text-kitty-pink text-[10px] font-bold"><User size={14} /></div>
-                        <span className="text-sm font-medium text-slate-600">{v.cliente?.nombre || 'Venta Rápida'}</span>
-                      </div>
-                    </td>
-                    <td className="p-5 text-right font-black text-slate-800">Bs. {v.total.toFixed(2)}</td>
-                    <td className="p-5">
-                      <p className="text-xs font-bold text-slate-600">{v.metodoPago}</p>
-                      <p className="text-[10px] text-slate-400">{v.cuentaDestino}</p>
-                    </td>
-                    <td className="p-5 text-center">
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
-                        {v.estado}
-                      </span>
-                    </td>
-                    <td className="p-5 text-center">
-                      {v.estado !== 'Anulada' && (
-                        <button 
-                          onClick={() => handleAnularVenta(v._id)}
-                          className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
-                          title="Anular Venta"
-                        >
-                          <RotateCcw size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {ventasFiltradas.length === 0 ? (
+                  <tr><td colSpan="6" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron ventas con los filtros actuales.</td></tr>
+                ) : (
+                  ventasFiltradas.map(v => (
+                    <tr key={v._id} className={`hover:bg-pink-50/30 transition-colors border-b border-slate-50 last:border-0 ${v.estado === 'Anulada' ? 'opacity-50' : ''}`}>
+                      <td className="p-5">
+                        <p className="text-sm font-bold text-slate-700">{new Date(v.fecha).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400">{new Date(v.fecha).toLocaleTimeString()}</p>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center text-kitty-pink text-[10px] font-bold"><User size={14} /></div>
+                          <span className="text-sm font-medium text-slate-600">{v.cliente?.nombre || 'Venta Rápida'}</span>
+                        </div>
+                      </td>
+                      <td className="p-5 text-right font-black text-slate-800">Bs. {v.total.toFixed(2)}</td>
+                      <td className="p-5">
+                        <p className="text-xs font-bold text-slate-600">{v.metodoPago}</p>
+                        <p className="text-[10px] text-slate-400">{v.cuentaDestino}</p>
+                      </td>
+                      <td className="p-5 text-center">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${v.estado === 'Completada' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
+                          {v.estado}
+                        </span>
+                      </td>
+                      <td className="p-5 text-center">
+                        {v.estado !== 'Anulada' && (
+                          <button onClick={() => handleAnularVenta(v._id)} className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all" title="Anular Venta">
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
+
+        // --- PESTAÑA: COMPRAS ---
         ) : (
           <div className="overflow-x-auto">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-4">
+                <ShoppingCart className="text-slate-600" /> Historial de Compras
+              </h2>
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Proveedor</label>
+                  <input type="text" placeholder="Ej. Importadora X..." 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                    value={filtroCompras.proveedorBusqueda} onChange={(e) => setFiltroCompras({...filtroCompras, proveedorBusqueda: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Estado</label>
+                  <select 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400 font-bold text-slate-600"
+                    value={filtroCompras.estado} onChange={(e) => setFiltroCompras({...filtroCompras, estado: e.target.value})}
+                  >
+                    <option value="">Todos</option>
+                    <option value="Recibido">Recibido</option>
+                    <option value="Anulada">Anulada</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                  <DatePicker selected={filtroCompras.fechaInicio} onChange={(date) => setFiltroCompras({...filtroCompras, fechaInicio: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Fin</label>
+                  <DatePicker selected={filtroCompras.fechaFin} onChange={(date) => setFiltroCompras({...filtroCompras, fechaFin: date})}
+                    locale="es" dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa"
+                    className="w-32 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                  />
+                </div>
+                <button onClick={() => setFiltroCompras({ fechaInicio: null, fechaFin: null, estado: '', proveedorBusqueda: '', productoBusqueda: '' })}
+                  className="px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex gap-2 items-center">
+                  <FilterX size={16}/> Limpiar
+                </button>
+              </div>
+            </div>
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
@@ -524,39 +742,37 @@ const ReportesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {compras.map(c => (
-                  <tr key={c._id} className={`hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${c.estado === 'Anulada' ? 'opacity-50' : ''}`}>
-                    <td className="p-5">
-                      <p className="text-sm font-bold text-slate-700">{new Date(c.createdAt).toLocaleDateString()}</p>
-                    </td>
-                    <td className="p-5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Truck size={14} /></div>
-                        <span className="text-sm font-medium text-slate-600">{c.proveedor?.nombreEmpresa || c.proveedor?.nombre || 'Importación'}</span>
-                      </div>
-                    </td>
-                    <td className="p-5 text-right font-black text-slate-800">Bs. {c.total.toFixed(2)}</td>
-                    <td className="p-5">
-                      <span className="text-xs font-bold text-slate-500">{c.productos?.length || 0} items recibidos</span>
-                    </td>
-                    <td className="p-5 text-center">
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${c.estado === 'Anulada' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                        {c.estado || 'Recibido'}
-                      </span>
-                    </td>
-                    <td className="p-5 text-center">
-                      {c.estado !== 'Anulada' && (
-                        <button 
-                          onClick={() => handleAnularCompra(c._id)}
-                          className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                          title="Anular Compra"
-                        >
-                          <RotateCcw size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {comprasFiltradas.length === 0 ? (
+                  <tr><td colSpan="6" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron compras con los filtros actuales.</td></tr>
+                ) : (
+                  comprasFiltradas.map(c => (
+                    <tr key={c._id} className={`hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${c.estado === 'Anulada' ? 'opacity-50' : ''}`}>
+                      <td className="p-5">
+                        <p className="text-sm font-bold text-slate-700">{new Date(c.createdAt).toLocaleDateString()}</p>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Truck size={14} /></div>
+                          <span className="text-sm font-medium text-slate-600">{c.proveedor?.nombreEmpresa || c.proveedor?.nombre || 'Importación'}</span>
+                        </div>
+                      </td>
+                      <td className="p-5 text-right font-black text-slate-800">Bs. {c.total.toFixed(2)}</td>
+                      <td className="p-5"><span className="text-xs font-bold text-slate-500">{c.productos?.length || 0} items recibidos</span></td>
+                      <td className="p-5 text-center">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${c.estado === 'Anulada' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                          {c.estado || 'Recibido'}
+                        </span>
+                      </td>
+                      <td className="p-5 text-center">
+                        {c.estado !== 'Anulada' && (
+                          <button onClick={() => handleAnularCompra(c._id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Anular Compra">
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

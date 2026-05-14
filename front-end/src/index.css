@@ -27,3 +27,50 @@
     @apply bg-kitty-pink hover:bg-kitty-rose text-white font-bold py-2 px-4 rounded-full shadow transition-colors duration-300;
   }
 }
+
+/* Custom react-datepicker styles for Rosastore theme */
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+.react-datepicker {
+  @apply font-sans border border-pink-100 shadow-lg rounded-xl overflow-hidden bg-white;
+}
+.react-datepicker__header {
+  @apply bg-pink-50 border-b border-pink-100 pt-3 pb-2 rounded-t-xl;
+}
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  @apply text-slate-700 font-black;
+}
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  @apply text-slate-600;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range,
+.react-datepicker__month-text--selected,
+.react-datepicker__month-text--in-selecting-range,
+.react-datepicker__month-text--in-range,
+.react-datepicker__quarter-text--selected,
+.react-datepicker__quarter-text--in-selecting-range,
+.react-datepicker__quarter-text--in-range,
+.react-datepicker__year-text--selected,
+.react-datepicker__year-text--in-selecting-range,
+.react-datepicker__year-text--in-range {
+  @apply bg-kitty-pink text-white font-bold rounded-lg;
+}
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__month-text--keyboard-selected,
+.react-datepicker__quarter-text--keyboard-selected,
+.react-datepicker__year-text--keyboard-selected {
+  @apply bg-pink-300 text-white rounded-lg;
+}
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__quarter-text:hover,
+.react-datepicker__year-text:hover {
+  @apply bg-pink-100 text-kitty-pink rounded-lg;
+}
