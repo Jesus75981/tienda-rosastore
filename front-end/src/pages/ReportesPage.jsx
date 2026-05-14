@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw, Users, List } from 'lucide-react';
 
 const ReportesPage = () => {
   const [ventas, setVentas] = useState([]);
@@ -61,6 +61,36 @@ const ReportesPage = () => {
   const totalVendido = ventas.reduce((sum, v) => sum + (v.estado !== 'Anulada' ? v.total : 0), 0);
   const totalComprado = compras.reduce((sum, c) => sum + (c.estado !== 'Anulada' ? c.total : 0), 0);
 
+  // Calcular Utilidad Estimada Real basada en el costo histórico de las ventas
+  const utilidadEstimada = ventas.reduce((sum, v) => {
+    if (v.estado === 'Anulada') return sum;
+    const utilidadVenta = v.productos?.reduce((acc, item) => {
+      const cCompraHistorico = item.costoHistorico || item.producto?.precioCompra || 0; 
+      const pVenta = item.precioUnitario || 0;
+      return acc + ((pVenta - cCompraHistorico) * item.cantidad);
+    }, 0) || 0;
+    return sum + utilidadVenta;
+  }, 0);
+
+  // Procesar Reporte de Clientes
+  const reporteClientes = ventas.reduce((acc, v) => {
+    if (v.estado !== 'Anulada') {
+      const clienteId = v.cliente?._id || 'rapida';
+      const clienteNombre = v.cliente?.nombre || 'Venta Rápida';
+      if (!acc[clienteId]) {
+        acc[clienteId] = { id: clienteId, nombre: clienteNombre, totalGastado: 0, compras: 0, ultimaCompra: v.fecha };
+      }
+      acc[clienteId].totalGastado += v.total;
+      acc[clienteId].compras += 1;
+      // Actualizar última compra si la venta es más reciente
+      if (new Date(v.fecha) > new Date(acc[clienteId].ultimaCompra)) {
+        acc[clienteId].ultimaCompra = v.fecha;
+      }
+    }
+    return acc;
+  }, {});
+  const clientesArray = Object.values(reporteClientes).sort((a, b) => b.totalGastado - a.totalGastado);
+
   if (loading) return <div className="p-8 text-center text-kitty-pink font-bold">Generando reportes maestros... 🎀📊</div>;
 
   return (
@@ -99,8 +129,8 @@ const ReportesPage = () => {
             <span className="text-[10px] font-black text-kitty-pink uppercase tracking-widest">Utilidad Estimada</span>
             <div className="p-2 bg-pink-50 text-kitty-pink rounded-xl"><TrendingUp size={20} /></div>
           </div>
-          <p className="text-2xl font-black text-slate-800">Bs. {(totalVendido - (totalComprado * 0.7)).toFixed(2)}</p>
-          <p className="text-xs text-slate-400 mt-1">Margen operativo bruto</p>
+          <p className="text-2xl font-black text-slate-800">Bs. {utilidadEstimada.toFixed(2)}</p>
+          <p className="text-xs text-slate-400 mt-1">Basado en ventas realizadas</p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -114,7 +144,7 @@ const ReportesPage = () => {
       </div>
 
       {/* Selector de Pestaña */}
-      <div className="flex gap-4 mb-6 bg-white p-2 rounded-2xl border border-pink-100 w-fit">
+      <div className="flex flex-wrap gap-4 mb-6 bg-white p-2 rounded-2xl border border-pink-100 w-fit">
         <button 
           onClick={() => setActiveTab('ventas')}
           className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'ventas' ? 'bg-kitty-pink text-white shadow-md' : 'text-slate-500 hover:bg-pink-50'}`}
@@ -128,6 +158,12 @@ const ReportesPage = () => {
           <ShoppingCart size={18} /> Historial de Compras
         </button>
         <button 
+          onClick={() => setActiveTab('detalle_compras')}
+          className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'detalle_compras' ? 'bg-cyan-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <List size={18} /> Detalle de Compras
+        </button>
+        <button 
           onClick={() => setActiveTab('rentabilidad')}
           className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'rentabilidad' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
         >
@@ -139,11 +175,111 @@ const ReportesPage = () => {
         >
           <Package size={18} /> Movimientos de Stock
         </button>
+        <button 
+          onClick={() => setActiveTab('clientes')}
+          className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'clientes' ? 'bg-teal-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <Users size={18} /> Mejores Clientes
+        </button>
       </div>
 
       {/* Tabla Dinámica */}
       <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
-        {activeTab === 'inventario' ? (
+        {activeTab === 'clientes' ? (
+          <div className="overflow-x-auto">
+            <div className="p-6 border-b border-teal-100 flex justify-between items-center bg-teal-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <Users className="text-teal-400" /> Reporte de Mejores Clientes
+              </h2>
+              <span className="text-xs font-bold text-teal-600 uppercase tracking-widest border border-teal-200 px-3 py-1 rounded-full bg-white">
+                Fidelización y Ventas
+              </span>
+            </div>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <th className="p-5 border-b border-slate-100">Cliente</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Nº de Compras</th>
+                  <th className="p-5 border-b border-slate-100 text-right">Total Invertido</th>
+                  <th className="p-5 border-b border-slate-100">Última Compra</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clientesArray.length === 0 ? (
+                  <tr><td colSpan="4" className="p-10 text-center text-slate-400 font-medium italic">No hay datos de clientes.</td></tr>
+                ) : (
+                  clientesArray.map((c, index) => (
+                    <tr key={c.id} className="hover:bg-teal-50/20 transition-colors border-b border-slate-50 last:border-0">
+                      <td className="p-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black ${index < 3 ? 'bg-yellow-100 text-yellow-600' : 'bg-slate-100 text-slate-500'}`}>
+                            {index + 1}
+                          </div>
+                          <p className="font-bold text-slate-800">{c.nombre}</p>
+                        </div>
+                      </td>
+                      <td className="p-5 text-center">
+                        <span className="font-black text-slate-600">{c.compras}</span>
+                      </td>
+                      <td className="p-5 text-right font-black text-teal-600">
+                        Bs. {c.totalGastado.toFixed(2)}
+                      </td>
+                      <td className="p-5">
+                        <p className="text-sm font-bold text-slate-700">{new Date(c.ultimaCompra).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400">{new Date(c.ultimaCompra).toLocaleTimeString()}</p>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === 'detalle_compras' ? (
+          <div className="overflow-x-auto">
+            <div className="p-6 border-b border-cyan-100 flex justify-between items-center bg-cyan-50/30">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <List className="text-cyan-400" /> Detalle de Productos Comprados
+              </h2>
+              <span className="text-xs font-bold text-cyan-600 uppercase tracking-widest border border-cyan-200 px-3 py-1 rounded-full bg-white">
+                Análisis de Inversión
+              </span>
+            </div>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white text-slate-500 text-xs font-black">
+                  <th className="p-5 border-b border-slate-100">Fecha</th>
+                  <th className="p-5 border-b border-slate-100">Proveedor</th>
+                  <th className="p-5 border-b border-slate-100">Producto</th>
+                  <th className="p-5 border-b border-slate-100 text-center">Cant.</th>
+                  <th className="p-5 border-b border-slate-100">Costo Unit.</th>
+                  <th className="p-5 border-b border-slate-100 text-right">Inversión Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compras.filter(c => c.estado !== 'Anulada').flatMap(c => 
+                  c.productos?.map((item, idx) => {
+                    const costoUnit = item.costoUnitario || item.precioCompra || 0;
+                    const inversionTotal = costoUnit * item.cantidad;
+                    return (
+                      <tr key={`${c._id}-${item.producto?._id || idx}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                        <td className="p-5 text-sm text-slate-600">{new Date(c.createdAt).toLocaleDateString()}</td>
+                        <td className="p-5 font-bold text-slate-700">{c.proveedor?.nombreEmpresa || c.proveedor?.nombre || 'Importación'}</td>
+                        <td className="p-5 font-bold text-slate-800">
+                          {item.producto?.nombre || 'Producto Eliminado'} <span className="text-gray-400 text-xs font-normal">({item.producto?.codigo || 'S/N'})</span>
+                        </td>
+                        <td className="p-5 text-center text-slate-600 font-medium">{item.cantidad}</td>
+                        <td className="p-5 text-slate-500">Bs. {costoUnit.toFixed(2)}</td>
+                        <td className="p-5 font-black text-right text-cyan-600">
+                          Bs. {inversionTotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === 'inventario' ? (
           <div className="overflow-x-auto">
             <div className="p-6 border-b border-orange-100 flex justify-between items-center bg-orange-50/30">
               <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">

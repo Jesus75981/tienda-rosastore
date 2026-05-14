@@ -195,6 +195,31 @@ router.get('/inventario/historial', async (req, res) => {
   }
 });
 
+// Endpoints especiales para ventas y compras (con populate) para los reportes y vistas
+router.get('/ventas', async (req, res) => {
+  try {
+    const ventas = await Venta.find()
+      .populate('cliente')
+      .populate('productos.producto')
+      .sort({ createdAt: -1 });
+    res.json(ventas);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/compras', async (req, res) => {
+  try {
+    const compras = await Compra.find()
+      .populate('proveedor')
+      .populate('productos.producto')
+      .sort({ createdAt: -1 });
+    res.json(compras);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Generar rutas CRUD automáticamente para cada modelo
 Object.keys(models).forEach(key => {
   const modelRouter = express.Router();
