@@ -44,6 +44,7 @@ const LogisticaPage = () => {
     switch(estado) {
       case 'Pendiente': return 'bg-amber-100 text-amber-700';
       case 'Recibido':  return 'bg-emerald-100 text-emerald-700';
+      case 'Cancelado': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -142,27 +143,37 @@ const LogisticaPage = () => {
                       )}
                     </td>
                     <td className="p-4 text-center">
-                      <select
-                        value={entrega.estadoEntrega}
-                        onChange={(e) => handleUpdate(entrega._id, 'estadoEntrega', e.target.value)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full outline-none border-2 border-transparent focus:border-pink-300 appearance-none cursor-pointer ${getStatusColor(entrega.estadoEntrega)}`}
-                      >
-                        <option value="Pendiente">⏳ Pendiente</option>
-                        <option value="Recibido">✅ Recibido</option>
-                      </select>
+                      {entrega.estadoEntrega === 'Cancelado' ? (
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full inline-block ${getStatusColor(entrega.estadoEntrega)}`}>
+                          ❌ Cancelado
+                        </span>
+                      ) : (
+                        <select
+                          value={entrega.estadoEntrega}
+                          onChange={(e) => handleUpdate(entrega._id, 'estadoEntrega', e.target.value)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full outline-none border-2 border-transparent focus:border-pink-300 appearance-none cursor-pointer ${getStatusColor(entrega.estadoEntrega)}`}
+                        >
+                          <option value="Pendiente">⏳ Pendiente</option>
+                          <option value="Recibido">✅ Recibido</option>
+                        </select>
+                      )}
                     </td>
                     <td className="p-4">
-                      <input 
-                        type="text" 
-                        placeholder="Asignar repartidor..."
-                        defaultValue={entrega.repartidor || ''}
-                        onBlur={(e) => {
-                          if (e.target.value !== entrega.repartidor) {
-                            handleUpdate(entrega._id, 'repartidor', e.target.value);
-                          }
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm outline-none focus:border-kitty-pink focus:bg-white"
-                      />
+                      {entrega.estadoEntrega === 'Cancelado' ? (
+                        <span className="text-sm text-gray-400 italic">Venta Anulada</span>
+                      ) : (
+                        <input 
+                          type="text" 
+                          placeholder="Asignar repartidor..."
+                          defaultValue={entrega.repartidor || ''}
+                          onBlur={(e) => {
+                            if (e.target.value !== entrega.repartidor) {
+                              handleUpdate(entrega._id, 'repartidor', e.target.value);
+                            }
+                          }}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm outline-none focus:border-kitty-pink focus:bg-white"
+                        />
+                      )}
                     </td>
                   </tr>
                 ))

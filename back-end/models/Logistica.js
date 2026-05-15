@@ -12,7 +12,7 @@ const logisticaSchema = new mongoose.Schema({
   costoEnvio: { type: Number, default: 0 },
   estadoEntrega: { 
     type: String, 
-    enum: ['Pendiente', 'Recibido'], 
+    enum: ['Pendiente', 'Recibido', 'Cancelado'], 
     default: 'Pendiente' 
   },
   fechaEstimada: { type: Date },
