@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw, Users, List, FilterX } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, CheckCircle, XCircle, ShoppingCart, ShoppingBag, Package, User, Truck, RotateCcw, Users, List, FilterX, Eye } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale/es';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -19,6 +19,7 @@ const ReportesPage = () => {
   const [filtroVentas, setFiltroVentas] = useState({ fechaInicio: null, fechaFin: null, metodoPago: '', estado: '', clienteBusqueda: '' });
   const [filtroCompras, setFiltroCompras] = useState({ fechaInicio: null, fechaFin: null, estado: '', proveedorBusqueda: '', productoBusqueda: '' });
   const [filtroInventario, setFiltroInventario] = useState({ fechaInicio: null, fechaFin: null, tipo: '', productoBusqueda: '' });
+  const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -637,6 +638,7 @@ const ReportesPage = () => {
                 <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                   <th className="p-5 border-b border-pink-50">Fecha y Hora</th>
                   <th className="p-5 border-b border-pink-50">Cliente</th>
+                  <th className="p-5 border-b border-pink-50">Productos</th>
                   <th className="p-5 border-b border-pink-50 text-right">Monto</th>
                   <th className="p-5 border-b border-pink-50">Método / Cuenta</th>
                   <th className="p-5 border-b border-pink-50 text-center">Estado</th>
@@ -645,7 +647,7 @@ const ReportesPage = () => {
               </thead>
               <tbody>
                 {ventasFiltradas.length === 0 ? (
-                  <tr><td colSpan="6" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron ventas con los filtros actuales.</td></tr>
+                  <tr><td colSpan="7" className="p-10 text-center text-slate-400 font-medium italic">No se encontraron ventas con los filtros actuales.</td></tr>
                 ) : (
                   ventasFiltradas.map(v => (
                     <tr key={v._id} className={`hover:bg-pink-50/30 transition-colors border-b border-slate-50 last:border-0 ${v.estado === 'Anulada' ? 'opacity-50' : ''}`}>
@@ -658,6 +660,14 @@ const ReportesPage = () => {
                           <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center text-kitty-pink text-[10px] font-bold"><User size={14} /></div>
                           <span className="text-sm font-medium text-slate-600">{v.cliente?.nombre || 'Venta Rápida'}</span>
                         </div>
+                      </td>
+                      <td className="p-5">
+                        <button 
+                          onClick={() => setVentaSeleccionada(v)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-kitty-pink hover:bg-kitty-pink hover:text-white rounded-lg transition-colors text-xs font-bold"
+                        >
+                          <Eye size={14} /> Ver Detalles ({v.productos?.length || 0})
+                        </button>
                       </td>
                       <td className="p-5 text-right font-black text-slate-800">Bs. {v.total.toFixed(2)}</td>
                       <td className="p-5">
@@ -778,6 +788,43 @@ const ReportesPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Productos de Venta */}
+      {ventaSeleccionada && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setVentaSeleccionada(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+            <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <Package className="text-kitty-pink" /> Detalles de la Venta
+            </h3>
+            
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {ventaSeleccionada.productos?.map((item, i) => {
+                const pVenta = item.precioUnitario || item.producto?.precioVenta || 0;
+                return (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-700 text-sm">{item.producto?.nombre || 'Producto eliminado'}</p>
+                      <p className="text-xs text-slate-500">{item.cantidad} x Bs. {pVenta.toFixed(2)}</p>
+                    </div>
+                    <p className="font-black text-kitty-pink">Bs. {(item.cantidad * pVenta).toFixed(2)}</p>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-500">Total Venta</span>
+              <span className="text-2xl font-black text-slate-800">Bs. {ventaSeleccionada.total.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
