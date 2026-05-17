@@ -20,6 +20,7 @@ const ReportesPage = () => {
   const [filtroCompras, setFiltroCompras] = useState({ fechaInicio: null, fechaFin: null, estado: '', proveedorBusqueda: '', productoBusqueda: '' });
   const [filtroInventario, setFiltroInventario] = useState({ fechaInicio: null, fechaFin: null, tipo: '', productoBusqueda: '' });
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
+  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -745,8 +746,8 @@ const ReportesPage = () => {
                 <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                   <th className="p-5 border-b border-slate-100">Fecha</th>
                   <th className="p-5 border-b border-slate-100">Proveedor</th>
-                  <th className="p-5 border-b border-slate-100 text-right">Inversión</th>
                   <th className="p-5 border-b border-slate-100">Productos</th>
+                  <th className="p-5 border-b border-slate-100 text-right">Inversión</th>
                   <th className="p-5 border-b border-slate-100 text-center">Estado</th>
                   <th className="p-5 border-b border-slate-100 text-center">Acciones</th>
                 </tr>
@@ -766,8 +767,15 @@ const ReportesPage = () => {
                           <span className="text-sm font-medium text-slate-600">{c.proveedor?.nombreEmpresa || c.proveedor?.nombre || 'Importación'}</span>
                         </div>
                       </td>
+                      <td className="p-5">
+                        <button 
+                          onClick={() => setCompraSeleccionada(c)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-800 hover:text-white rounded-lg transition-colors text-xs font-bold"
+                        >
+                          <Eye size={14} /> Ver Detalles ({c.productos?.length || 0})
+                        </button>
+                      </td>
                       <td className="p-5 text-right font-black text-slate-800">Bs. {c.total.toFixed(2)}</td>
-                      <td className="p-5"><span className="text-xs font-bold text-slate-500">{c.productos?.length || 0} items recibidos</span></td>
                       <td className="p-5 text-center">
                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${c.estado === 'Anulada' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                           {c.estado || 'Recibido'}
@@ -821,6 +829,43 @@ const ReportesPage = () => {
             <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
               <span className="text-sm font-bold text-slate-500">Total Venta</span>
               <span className="text-2xl font-black text-slate-800">Bs. {ventaSeleccionada.total.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Productos de Compra */}
+      {compraSeleccionada && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setCompraSeleccionada(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+            <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <ShoppingCart className="text-slate-600" /> Detalles de la Compra
+            </h3>
+            
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {compraSeleccionada.productos?.map((item, i) => {
+                const cCompra = item.costoUnitario || item.precioCompra || item.producto?.precioCompra || 0;
+                return (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-700 text-sm">{item.producto?.nombre || 'Producto eliminado'}</p>
+                      <p className="text-xs text-slate-500">{item.cantidad} x Bs. {cCompra.toFixed(2)}</p>
+                    </div>
+                    <p className="font-black text-slate-800">Bs. {(item.cantidad * cCompra).toFixed(2)}</p>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-500">Inversión Total</span>
+              <span className="text-2xl font-black text-slate-800">Bs. {compraSeleccionada.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
