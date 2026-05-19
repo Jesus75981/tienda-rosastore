@@ -29,7 +29,7 @@ const models = {
   cuentas: Cuenta
 };
 
-import { registrarVenta, anularVenta } from '../controllers/ventaController.js';
+import { registrarVenta, anularVenta, devolverProductoVenta } from '../controllers/ventaController.js';
 import { registrarCompra, anularCompra } from '../controllers/compraController.js';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
@@ -56,6 +56,7 @@ const upload = multer({ storage: storage });
 // Rutas personalizadas
 router.post('/ventas', registrarVenta);
 router.put('/ventas/:id/anular', anularVenta);
+router.put('/ventas/:id/devolver-producto', devolverProductoVenta);
 router.post('/compras', registrarCompra);
 router.put('/compras/:id/anular', anularCompra);
 
@@ -172,9 +173,10 @@ router.get('/logistica/detalles', async (req, res) => {
     const entregas = await Logistica.find()
       .populate({
         path: 'venta',
-        populate: {
-          path: 'cliente'
-        }
+        populate: [
+          { path: 'cliente' },
+          { path: 'productos.producto' }
+        ]
       })
       .sort({ createdAt: -1 });
     res.json(entregas);

@@ -153,3 +153,72 @@ export const anularVenta = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const devolverProductoVenta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { productoId, cantidadADevolver } = req.body;
+
+    if (!cantidadADevolver || cantidadADevolver <= 0) {
+      return res.status(400).json({ message: 'La cantidad a devolver debe ser mayor a 0' });
+    }
+
+    const venta = await Venta.findById(id);
+    if (!venta) return res.status(404).json({ message: 'Venta no encontrada' });
+    if (venta.estado === 'Anulada') return res.status(400).json({ message: 'La venta ya está anulada' });
+
+    // Encontrar el producto en la venta
+    const itemIndex = venta.productos.findIndex(p => p.producto.toString() === productoId);
+    if (itemIndex === -1) return res.status(404).json({ message: 'Producto no encontrado en esta venta' });
+
+    const item = venta.productos[itemIndex];
+    const cantidadDisponible = item.cantidad - (item.cantidadDevuelta || 0);
+
+    if (cantidadADevolver > cantidadDisponible) {
+      return res.status(400).json({ message: `No puedes devolver más de ${cantidadDisponible} unidades de este producto` });
+    }
+
+    // 1. Actualizar el ítem en la venta
+    item.cantidadDevuelta = (item.cantidadDevuelta || 0) + cantidadADevolver;
+    item.cantidad -= cantidadADevolver;
+    
+    const montoADevolver = item.precioUnitario * cantidadADevolver;
+    item.subtotal -= montoADevolver;
+
+    // Actualizar totales de la venta
+    venta.subtotalProductos -= montoADevolver;
+    venta.total -= montoADevolver;
+
+    await venta.save();
+
+    // 2. Devolver stock
+    await Producto.findByIdAndUpdate(productoId, {
+      $inc: { stock: cantidadADevolver }
+    });
+
+    // 3. Registro en historial de inventario (Re-entrada por devolución parcial)
+    const movInventario = new Inventario({
+      producto: productoId,
+      tipoMovimiento: 'Entrada',
+      cantidad: cantidadADevolver,
+      motivo: `Devolución Parcial de Venta #${venta._id.toString().slice(-6).toUpperCase()}`
+    });
+    await movInventario.save();
+
+    // 4. Revertir Finanzas (Devolver el dinero al cliente como Egreso)
+    const devolucionFinanzas = new Finanzas({
+      tipoTransaccion: 'Egreso',
+      monto: montoADevolver,
+      cuenta: venta.cuentaDestino || 'Caja Tienda',
+      categoria: 'Devolución',
+      descripcion: `Devolución parcial de venta: ${venta._id}`,
+      referenciaId: venta._id,
+      referenciaModelo: 'Venta'
+    });
+    await devolucionFinanzas.save();
+
+    res.status(200).json(venta);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

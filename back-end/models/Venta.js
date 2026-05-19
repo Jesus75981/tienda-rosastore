@@ -5,6 +5,7 @@ const ventaSchema = new mongoose.Schema({
   productos: [{
     producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto', required: true },
     cantidad: { type: Number, required: true },
+    cantidadDevuelta: { type: Number, default: 0 },
     precioUnitario: { type: Number, required: true },
     costoHistorico: { type: Number, required: true, default: 0 },
     subtotal: { type: Number, required: true },

@@ -71,6 +71,32 @@ const ReportesPage = () => {
     }
   };
 
+  const handleDevolverProducto = async (ventaId, productoId, maxCantidad) => {
+    const cantidad = prompt(`¿Cuántas unidades deseas devolver? (Máximo: ${maxCantidad})`);
+    if (!cantidad) return;
+    
+    const cantidadNum = parseInt(cantidad, 10);
+    if (isNaN(cantidadNum) || cantidadNum <= 0 || cantidadNum > maxCantidad) {
+      alert("Cantidad inválida.");
+      return;
+    }
+
+    if (window.confirm(`¿Confirmas la devolución de ${cantidadNum} unidades? Esto actualizará finanzas e inventario.`)) {
+      try {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/ventas/${ventaId}/devolver-producto`, {
+          productoId,
+          cantidadADevolver: cantidadNum
+        });
+        alert("Devolución parcial procesada con éxito. 🔄");
+        setVentaSeleccionada(null);
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        alert(error.response?.data?.message || "Error al procesar la devolución.");
+      }
+    }
+  };
+
   const totalVendido = ventas.reduce((sum, v) => sum + (v.estado !== 'Anulada' ? v.total : 0), 0);
   const totalComprado = compras.reduce((sum, c) => sum + (c.estado !== 'Anulada' ? c.total : 0), 0);
 
@@ -817,10 +843,28 @@ const ReportesPage = () => {
                 return (
                   <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div>
-                      <p className="font-bold text-slate-700 text-sm">{item.producto?.nombre || 'Producto eliminado'}</p>
+                      <p className="font-bold text-slate-700 text-sm">
+                        {item.producto?.nombre || 'Producto eliminado'}
+                        {item.cantidadDevuelta > 0 && (
+                          <span className="ml-2 text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">
+                            (-{item.cantidadDevuelta} devueltas)
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-slate-500">{item.cantidad} x Bs. {pVenta.toFixed(2)}</p>
                     </div>
-                    <p className="font-black text-kitty-pink">Bs. {(item.cantidad * pVenta).toFixed(2)}</p>
+                    <div className="flex items-center gap-4">
+                      <p className="font-black text-kitty-pink">Bs. {(item.cantidad * pVenta).toFixed(2)}</p>
+                      {ventaSeleccionada.estado !== 'Anulada' && item.cantidad > 0 && (
+                        <button 
+                          onClick={() => handleDevolverProducto(ventaSeleccionada._id, item.producto?._id, item.cantidad)}
+                          className="px-3 py-1 bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                          title="Devolver unidades de este producto"
+                        >
+                          <RotateCcw size={12} /> Devolver
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

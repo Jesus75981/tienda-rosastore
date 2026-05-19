@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Truck, MapPin, Search, Package, User, CheckCircle, Clock } from 'lucide-react';
+import { Truck, MapPin, Search, Package, User, CheckCircle, Clock, Eye, XCircle, RotateCcw } from 'lucide-react';
 
 const LogisticaPage = () => {
   const [entregas, setEntregas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [entregaSeleccionada, setEntregaSeleccionada] = useState(null);
 
   const fetchEntregas = async () => {
     try {
@@ -30,6 +31,32 @@ const LogisticaPage = () => {
     } catch (error) {
       console.error("Error al actualizar logística:", error);
       alert("No se pudo actualizar el registro.");
+    }
+  };
+
+  const handleDevolverProducto = async (ventaId, productoId, maxCantidad) => {
+    const cantidad = prompt(`¿Cuántas unidades deseas devolver/rechazar? (Máximo: ${maxCantidad})`);
+    if (!cantidad) return;
+    
+    const cantidadNum = parseInt(cantidad, 10);
+    if (isNaN(cantidadNum) || cantidadNum <= 0 || cantidadNum > maxCantidad) {
+      alert("Cantidad inválida.");
+      return;
+    }
+
+    if (window.confirm(`¿Confirmas el rechazo de ${cantidadNum} unidades? Esto actualizará finanzas e inventario automáticamente.`)) {
+      try {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/ventas/${ventaId}/devolver-producto`, {
+          productoId,
+          cantidadADevolver: cantidadNum
+        });
+        alert("Devolución/Rechazo parcial procesado con éxito. 🔄");
+        setEntregaSeleccionada(null);
+        fetchEntregas();
+      } catch (error) {
+        console.error(error);
+        alert(error.response?.data?.message || "Error al procesar la devolución.");
+      }
     }
   };
 
@@ -88,6 +115,7 @@ const LogisticaPage = () => {
               <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
                 <th className="p-4 border-b border-pink-100 font-bold">Fecha / Venta</th>
                 <th className="p-4 border-b border-pink-100 font-bold">Cliente</th>
+                <th className="p-4 border-b border-pink-100 font-bold">Productos</th>
                 <th className="p-4 border-b border-pink-100 font-bold">Envío / Dirección</th>
                 <th className="p-4 border-b border-pink-100 font-bold text-center">Estado</th>
                 <th className="p-4 border-b border-pink-100 font-bold">Repartidor</th>
@@ -118,6 +146,14 @@ const LogisticaPage = () => {
                             : 'Consumidor Final'}
                         </span>
                       </div>
+                    </td>
+                    <td className="p-4">
+                      <button 
+                        onClick={() => setEntregaSeleccionada(entrega)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-kitty-pink hover:bg-kitty-pink hover:text-white rounded-lg transition-colors text-xs font-bold"
+                      >
+                        <Eye size={14} /> Ver / Rechazar ({entrega.venta?.productos?.length || 0})
+                      </button>
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-kitty-pink text-sm flex items-center gap-1">
@@ -182,6 +218,61 @@ const LogisticaPage = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de Productos de la Entrega */}
+      {entregaSeleccionada && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setEntregaSeleccionada(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+            <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <Package className="text-kitty-pink" /> Detalles de la Entrega
+            </h3>
+            
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {entregaSeleccionada.venta?.productos?.map((item, i) => {
+                const pVenta = item.precioUnitario || item.producto?.precioVenta || 0;
+                return (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-700 text-sm">
+                        {item.producto?.nombre || 'Producto eliminado'}
+                        {item.cantidadDevuelta > 0 && (
+                          <span className="ml-2 text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">
+                            (-{item.cantidadDevuelta} rechazadas)
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-slate-500">{item.cantidad} x Bs. {pVenta.toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="font-black text-kitty-pink">Bs. {(item.cantidad * pVenta).toFixed(2)}</p>
+                      {entregaSeleccionada.venta?.estado !== 'Anulada' && item.cantidad > 0 && (
+                        <button 
+                          onClick={() => handleDevolverProducto(entregaSeleccionada.venta._id, item.producto?._id, item.cantidad)}
+                          className="px-3 py-1 bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                          title="Rechazar unidades en entrega"
+                        >
+                          <RotateCcw size={12} /> Rechazar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-500">Total Venta</span>
+              <span className="text-2xl font-black text-slate-800">Bs. {entregaSeleccionada.venta?.total?.toFixed(2) || '0.00'}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
