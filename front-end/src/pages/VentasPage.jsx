@@ -17,6 +17,8 @@ const VentasPage = () => {
   const [saldos, setSaldos] = useState({});
   const [isClienteModalOpen, setIsClienteModalOpen] = useState(false);
   const [nuevoCliente, setNuevoCliente] = useState({ nombre: '', telefono: '' });
+  const [searchCliente, setSearchCliente] = useState('');
+  const [isClienteDropdownOpen, setIsClienteDropdownOpen] = useState(false);
   
   // Estado Logística
   const [tipoEnvio, setTipoEnvio] = useState('Envio a Domicilio');
@@ -69,6 +71,38 @@ const VentasPage = () => {
     };
     fetchData();
   }, []);
+
+  // Sincronizar campo de texto con cliente seleccionado y cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    if (clienteSeleccionado) {
+      const cli = clientes.find(c => c._id === clienteSeleccionado);
+      if (cli) {
+        setSearchCliente(`${cli.nombre} ${cli.apellidos || ''}`.trim());
+      }
+    } else {
+      setSearchCliente('');
+    }
+  }, [clienteSeleccionado, clientes]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const container = document.getElementById('cliente-select-container');
+      if (container && !container.contains(event.target)) {
+        setIsClienteDropdownOpen(false);
+        // Restaurar el nombre en el input de búsqueda si se cancela la selección
+        if (clienteSeleccionado) {
+          const cli = clientes.find(c => c._id === clienteSeleccionado);
+          if (cli) {
+            setSearchCliente(`${cli.nombre} ${cli.apellidos || ''}`.trim());
+            return;
+          }
+        }
+        setSearchCliente('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [clienteSeleccionado, clientes]);
 
   const agregarAlCarrito = (producto) => {
     const itemExistente = carrito.find(item => item.producto._id === producto._id);
@@ -221,7 +255,8 @@ const VentasPage = () => {
       alert("Cliente registrado rápidamente. 🎀");
     } catch (error) {
       console.error("Error al registrar cliente:", error);
-      alert("Hubo un error al registrar el cliente.");
+      const msg = error.response?.data?.message || "Hubo un error al registrar el cliente.";
+      alert(msg);
     }
   };
 
@@ -230,6 +265,11 @@ const VentasPage = () => {
     (p.marca && p.marca.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (p.codigo && p.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const clientesFiltrados = clientes.filter(c => {
+    const fullName = `${c.nombre} ${c.apellidos || ''}`.toLowerCase();
+    return fullName.includes(searchCliente.toLowerCase());
+  });
 
   if (loading) return <div className="p-8 text-center text-kitty-pink">Cargando sistema de ventas... 🎀</div>;
 
@@ -385,16 +425,74 @@ const VentasPage = () => {
                   <Plus size={12} /> Nuevo
                 </button>
               </div>
-              <select 
-                value={clienteSeleccionado} 
-                onChange={(e) => setClienteSeleccionado(e.target.value)}
-                className="w-full bg-white border border-pink-100 rounded-lg p-2 outline-none focus:border-kitty-pink text-sm"
-              >
-                <option value="">Consumidor Final</option>
-                {clientes.map(c => (
-                  <option key={c._id} value={c._id}>{c.nombre} {c.apellidos}</option>
-                ))}
-              </select>
+              <div className="relative" id="cliente-select-container">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar o seleccionar cliente..."
+                    value={searchCliente}
+                    onChange={(e) => {
+                      setSearchCliente(e.target.value);
+                      setIsClienteDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsClienteDropdownOpen(true)}
+                    className="w-full bg-white border border-pink-200 rounded-lg p-2.5 pr-8 outline-none focus:border-kitty-pink text-sm transition-all focus:ring-1 focus:ring-kitty-pink/30"
+                  />
+                  {clienteSeleccionado && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClienteSeleccionado('');
+                        setSearchCliente('');
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {isClienteDropdownOpen && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white border border-pink-100 rounded-xl shadow-lg max-h-60 overflow-y-auto z-20">
+                    <div
+                      onClick={() => {
+                        setClienteSeleccionado('');
+                        setSearchCliente('');
+                        setIsClienteDropdownOpen(false);
+                      }}
+                      className={`p-2.5 hover:bg-pink-50 cursor-pointer text-sm font-semibold border-b border-pink-50 transition-colors ${!clienteSeleccionado ? 'text-kitty-pink bg-pink-50/50' : 'text-slate-500'}`}
+                    >
+                      Consumidor Final
+                    </div>
+                    {clientesFiltrados.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-gray-400">
+                        No se encontraron clientes
+                      </div>
+                    ) : (
+                      clientesFiltrados.map(c => {
+                        const isSelected = c._id === clienteSeleccionado;
+                        return (
+                          <div
+                            key={c._id}
+                            onClick={() => {
+                              setClienteSeleccionado(c._id);
+                              setSearchCliente(`${c.nombre} ${c.apellidos || ''}`.trim());
+                              setIsClienteDropdownOpen(false);
+                            }}
+                            className={`p-2.5 hover:bg-pink-50 cursor-pointer text-sm transition-colors flex justify-between items-center ${isSelected ? 'text-kitty-pink bg-pink-50 font-bold' : 'text-slate-700'}`}
+                          >
+                            <div>
+                              <div>{c.nombre} {c.apellidos || ''}</div>
+                              {c.telefono && <div className="text-[10px] text-gray-400">{c.telefono}</div>}
+                            </div>
+                            {isSelected && <Check size={14} className="text-kitty-pink" />}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mb-4">
